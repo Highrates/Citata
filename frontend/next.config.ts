@@ -21,6 +21,16 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'citata-pr.ru',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.citata-pr.ru',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'cdn.prod.website-files.com',
         pathname: '/**',
       },
