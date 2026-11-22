@@ -13,7 +13,6 @@ export const adminNavItems: AdminNavItem[] = [
   { href: adminPath('about'), label: 'О нас' },
   { href: adminPath('articles'), label: 'Статьи' },
   { href: adminPath('press'), label: 'Пресса' },
-  { href: adminPath('media'), label: 'Медиа' },
   { href: adminPath('settings'), label: 'Настройки' },
 ]
 

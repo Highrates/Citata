@@ -39,6 +39,8 @@ export type ArticleSection =
   | { type: 'quote'; text: string }
   | { type: 'list'; items: string[] }
 
+export type ArticleStatus = 'draft' | 'published'
+
 export type Article = {
   slug: string
   title: string
@@ -49,6 +51,11 @@ export type Article = {
   publishedAt: string
   readingTime: number
   featured?: boolean
+  status?: ArticleStatus
+  /** HTML из RichBlock */
+  description?: string
+  gallery?: CaseGalleryItem[]
+  /** @deprecated prefer `description` HTML */
   sections: ArticleSection[]
   seo?: { title?: string; description?: string }
 }
@@ -73,7 +80,7 @@ export type SiteSettings = {
   aboutStats: { years: number; brands: number; reachMillions: number }
   /** Первое фото — основной портрет на /about */
   aboutGallery: CaseGalleryItem[]
-  contacts: { name: string; role: string; email: string }[]
+  contacts: { name: string; role: string; email: string; telegram?: string }[]
   legal: {
     disclaimer: string
     companyName: string

@@ -84,13 +84,13 @@ export function HomeCasesGrid({ cases }: HomeCasesGridProps) {
                 <Link href={`/works/${item.slug}`} className="home-cases-grid__card">
                   <div
                     className="home-cases-grid__media"
-                    style={{ aspectRatio: `${item.aspect}` }}
+                    style={{ ['--case-aspect' as string]: String(item.aspect) }}
                   >
                     <Image
                       src={item.cover}
                       alt={item.coverAlt}
                       fill
-                      sizes="(max-width: 560px) 100vw, (max-width: 960px) 33vw, 20vw"
+                      sizes="(max-width: 560px) 100vw, (max-width: 960px) 50vw, 20vw"
                       className="home-cases-grid__image"
                     />
                   </div>

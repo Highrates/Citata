@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
 
 import type {
-  ArticleSection,
+  ArticleStatus,
   CaseGalleryItem,
   CaseStatus,
   PressMention,
@@ -320,6 +320,41 @@ export async function deleteCaseAction(formData: FormData) {
   }
 }
 
+export async function checkArticleSlugAction(
+  slugRaw: string,
+  excludeSlug?: string,
+): Promise<{ available: boolean; slug: string; reason?: string }> {
+  const slug = slugify(slugRaw)
+  if (!slug) {
+    return { available: false, slug: '', reason: 'Пустой slug' }
+  }
+
+  if (!hasPayloadDatabase()) {
+    return { available: true, slug }
+  }
+
+  try {
+    const payload = await getAdminPayload()
+    const existingId = await findArticleIdBySlug(payload, slug)
+    if (!existingId) return { available: true, slug }
+
+    if (excludeSlug && excludeSlug === slug) {
+      return { available: true, slug }
+    }
+
+    if (excludeSlug) {
+      const currentId = await findArticleIdBySlug(payload, excludeSlug)
+      if (currentId && currentId === existingId) {
+        return { available: true, slug }
+      }
+    }
+
+    return { available: false, slug, reason: 'Уже занят' }
+  } catch {
+    return { available: false, slug, reason: 'Не удалось проверить' }
+  }
+}
+
 export async function saveArticleAction(formData: FormData) {
   const returnPath = formData.get('returnPath')
   const basePath =
@@ -332,62 +367,96 @@ export async function saveArticleAction(formData: FormData) {
   try {
     const payload = await getAdminPayload()
     const originalSlug = formString(formData, 'originalSlug')
-    const slug = formString(formData, 'slug')
+    const slug = slugify(formString(formData, 'slug'))
     const title = formString(formData, 'title')
-    const coverUrl = formString(formData, 'cover')
     const authorName = formString(formData, 'author')
     const publishedAt = formString(formData, 'publishedAt')
 
-    if (!title || !slug || !coverUrl || !authorName || !publishedAt) {
+    if (!title || !slug || !authorName || !publishedAt) {
       redirectWithError(basePath, 'Заполните обязательные поля')
     }
 
-    const sections = parseJsonField<ArticleSection[]>(
-      formString(formData, 'sectionsJson'),
-      'секции',
+    const gallery = parseJsonField<CaseGalleryItem[]>(
+      formString(formData, 'galleryJson'),
+      'галерея',
     )
-
-    if (!sections.length) {
-      redirectWithError(basePath, 'Добавьте хотя бы одну секцию')
+    const coverUrl = formString(formData, 'cover') || gallery[0]?.src || ''
+    if (!coverUrl) {
+      redirectWithError(basePath, 'Добавьте хотя бы одно фото или видео в галерею')
     }
 
-    const coverId = await ensureMediaByUrl(payload, coverUrl, title)
+    const statusRaw = formString(formData, 'status') as ArticleStatus
+    const status: ArticleStatus =
+      statusRaw === 'published' || statusRaw === 'draft' ? statusRaw : 'draft'
+
+    const galleryMediaIds: number[] = []
+    for (const item of gallery) {
+      if (!item.src) continue
+      const id = await ensureMediaByUrl(payload, item.src, item.alt || title)
+      galleryMediaIds.push(id)
+    }
+
+    const coverId =
+      galleryMediaIds[0] ?? (await ensureMediaByUrl(payload, coverUrl, title))
     const authorId = await ensureAuthor(payload, authorName, formString(formData, 'role'))
+
+    const seoTitle = formString(formData, 'seoTitle') || undefined
+    const seoDescription = formString(formData, 'seoDescription') || undefined
+    const description = formString(formData, 'description') || undefined
 
     const article = {
       slug,
       title,
       excerpt: formString(formData, 'excerpt'),
       cover: coverUrl,
-      coverAlt: title,
+      coverAlt: gallery[0]?.alt || title,
       author: { name: authorName, role: formString(formData, 'role') },
       publishedAt: new Date(publishedAt).toISOString(),
       readingTime: formNumber(formData, 'readingTime', 3),
-      featured: formBool(formData, 'featured'),
-      sections,
+      featured: formBool(formData, 'featured') && status === 'published',
+      status,
+      description,
+      gallery,
+      sections: [],
+      seo: {
+        title: seoTitle,
+        description: seoDescription,
+      },
     }
 
     const data = {
-      ...mapArticleToPayloadData(article, { coverId, authorId }),
+      ...mapArticleToPayloadData(article, { coverId, authorId, galleryMediaIds }),
       cover: coverId,
       author: authorId,
+      gallery: galleryMediaIds.map((media) => ({ media })),
+      status,
+      description: description || null,
+      sections: [],
+      meta: {
+        title: seoTitle || null,
+        description: seoDescription || null,
+      },
     }
 
-    if (!data.meta) {
-      delete (data as { meta?: unknown }).meta
-    }
     const existingId = originalSlug ? await findArticleIdBySlug(payload, originalSlug) : undefined
+    const duplicateId = await findArticleIdBySlug(payload, slug)
+    if (duplicateId && duplicateId !== existingId) {
+      redirectWithError(basePath, 'Статья с таким slug уже существует')
+    }
 
     if (existingId) {
       await payload.update({ collection: 'articles', id: existingId, data })
     } else {
-      const duplicate = await findArticleIdBySlug(payload, slug)
-      if (duplicate) redirectWithError(basePath, 'Статья с таким slug уже существует')
       await payload.create({ collection: 'articles', data, draft: false })
     }
 
     revalidatePath(adminPath('articles'))
     revalidatePath(`/articles/${slug}`)
+    if (originalSlug && originalSlug !== slug) {
+      revalidatePath(`/articles/${originalSlug}`)
+    }
+    revalidatePath('/articles')
+    revalidatePath('/')
     revalidateTag('articles')
     redirect(`${adminPath(`articles/${slug}`)}?saved=1`)
   } catch (error) {

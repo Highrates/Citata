@@ -2,7 +2,12 @@
 
 import { SiteBar } from '@/components/layout/SiteBar'
 
-/** Compact header that appears after the hero block scrolls away. */
-export function HomeScrollHeader() {
-  return <SiteBar mode="reveal" />
+type HomeScrollHeaderProps = {
+  email?: string
+  telegramUrl?: string
+}
+
+/** Compact header: always on mobile; after hero scroll on desktop. */
+export function HomeScrollHeader({ email, telegramUrl }: HomeScrollHeaderProps) {
+  return <SiteBar mode="reveal" email={email} telegramUrl={telegramUrl} />
 }

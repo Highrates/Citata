@@ -83,6 +83,8 @@ export function SitePreloader({ telegramUrl = 'https://t.me/citatapr' }: SitePre
       if (exitTimer) clearTimeout(exitTimer)
       exitTl?.kill()
       gsap.killTweensOf([root, logo, below].filter(Boolean))
+      document.documentElement.classList.remove('is-preloading')
+      document.body.style.overflow = ''
     }
   }, [done])
 

@@ -1,6 +1,20 @@
 import type { ArticleSection } from '@/content/types'
 
-export function ArticleBody({ sections }: { sections: ArticleSection[] }) {
+type ArticleBodyProps = {
+  sections?: ArticleSection[]
+  description?: string
+}
+
+export function ArticleBody({ sections = [], description }: ArticleBodyProps) {
+  if (description?.trim()) {
+    return (
+      <div
+        className="article-body case-rich-html"
+        dangerouslySetInnerHTML={{ __html: description }}
+      />
+    )
+  }
+
   return (
     <div className="article-body prose prose-neutral">
       {sections.map((section, index) => {

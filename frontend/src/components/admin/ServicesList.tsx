@@ -174,8 +174,6 @@ export function ServicesList({ items: initialItems, source, saved, error }: Serv
         </Link>
       </div>
 
-      <p className="admin-lead">Список услуг на странице /services. Обложка показывается при наведении.</p>
-
       <AdminSourceBanner source={source} />
       <AdminFlash saved={saved} error={error} />
 

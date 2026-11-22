@@ -16,6 +16,33 @@ export const cases: Case[] = [
       'Информационная поддержка во время кризиса. «Краснополянская косметика» сохранила бизнес после суда и получила новых клиентов',
     featured: true,
     sortOrder: 8,
+    gallery: [
+      {
+        src: `${CDN}/680fd515341f105f31056ab1_PR%20%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D0%BF%D0%BE%D0%BB%D1%8F%D0%BD%D1%81%D0%BA%D0%B0%D1%8F%20%D0%BA%D0%BE%D1%81%D0%BC%D0%B5%D1%82%D0%B8%D0%BA%D0%B0.jpg`,
+        alt: 'Краснополянская косметика — обложка',
+        kind: 'image',
+      },
+      {
+        src: `${CDN}/680d396df3ef412f7592a3c8_%D0%A6%D0%B8%D1%82%D0%B0%D1%82%D0%B0_x_%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D0%BF%D0%BE%D0%BB%D1%8F%D0%BD%D1%81%D0%BA%D0%B0%D1%8F%20%D0%BA%D0%BE%D1%81%D0%BC%D0%B5%D1%82%D0%B8%D0%BA%D0%B0-p-2000.jpg`,
+        alt: 'Лавандовые поля Краснополянской косметики',
+        kind: 'image',
+      },
+      {
+        src: `${CDN}/67ead93020d186e9b8abdf81_original.jpg`,
+        alt: 'Публикация о кейсе',
+        kind: 'image',
+      },
+      {
+        src: `${CDN}/67fd149ce08c18f4bac1ed38_%D0%BA%D0%BF%20%D1%84%D0%BE%D1%80%D0%B1%D1%81.PNG`,
+        alt: 'Материал в Forbes',
+        kind: 'image',
+      },
+      {
+        src: `${CDN}/67fd149cdbd6d260ef02524b_%D0%BA%D0%BF9.PNG`,
+        alt: 'Медиа-охват кампании',
+        kind: 'image',
+      },
+    ],
     blocks: [
       { type: 'heading', level: 'h2', text: 'Цель PR-кампании' },
       {

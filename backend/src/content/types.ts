@@ -71,7 +71,7 @@ export type SiteSettings = {
   aboutStats: { years: number; brands: number; reachMillions: number }
   /** Первое фото — основной портрет на /about */
   aboutGallery: CaseGalleryItem[]
-  contacts: { name: string; role: string; email: string }[]
+  contacts: { name: string; role: string; email: string; telegram?: string }[]
   legal: {
     disclaimer: string
     companyName: string

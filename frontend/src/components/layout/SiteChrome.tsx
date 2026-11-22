@@ -10,6 +10,7 @@ type SiteChromeProps = {
   children: React.ReactNode
   telegramChannelUrl: string
   telegramBotUrl: string
+  infoEmail?: string
   legal: SiteSettings['legal']
 }
 
@@ -17,6 +18,7 @@ export function SiteChrome({
   children,
   telegramChannelUrl,
   telegramBotUrl,
+  infoEmail,
   legal,
 }: SiteChromeProps) {
   const pathname = usePathname()
@@ -28,7 +30,13 @@ export function SiteChrome({
   return (
     <>
       <SitePreloader telegramUrl={telegramChannelUrl} />
-      {!hideHeader ? <SiteBar mode="always" /> : null}
+      {!hideHeader ? (
+        <SiteBar
+          mode="always"
+          email={infoEmail}
+          telegramUrl={telegramChannelUrl}
+        />
+      ) : null}
       <main className={hideHeader ? undefined : 'page-with-bar'}>{children}</main>
       {!isServices && !isAbout ? (
         <Footer

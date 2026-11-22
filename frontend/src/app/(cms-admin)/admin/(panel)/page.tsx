@@ -17,14 +17,12 @@ export default async function AdminDashboardPage() {
     { href: adminPath('about'), title: 'О нас', note: 'Текст и цифры /about' },
     { href: adminPath('articles'), title: 'Статьи', note: `${articles.length} публикаций` },
     { href: adminPath('press'), title: 'Пресса', note: `${press.length} ссылок` },
-    { href: adminPath('media'), title: 'Медиа', note: 'Библиотека файлов' },
     { href: adminPath('settings'), title: 'Настройки', note: 'Контакты, Telegram, юр. инфо' },
   ]
 
   return (
     <>
       <h1 className="admin-title">Обзор</h1>
-      <p className="admin-lead">Кастомная админка — единая точка входа для редакторов.</p>
       <ul className="admin-dashboard-grid">
         {cards.map((card) => (
           <li key={card.href}>

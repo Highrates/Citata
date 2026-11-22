@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CaseBlocks } from '@/components/cases/CaseBlocks'
+import { CaseCard } from '@/components/cases/CaseCard'
 import { FadeIn } from '@/components/animations/FadeIn'
 import { cases as fixtureCases } from '@/content/cases'
 import { getCases } from '@/lib/content'
@@ -39,11 +40,8 @@ function caseOutcome(item: Case) {
   return { lead: hero || summary || '', dek: '' }
 }
 
-function nextCase(all: Case[], slug: string): Case | undefined {
-  if (all.length < 2) return undefined
-  const index = all.findIndex((c) => c.slug === slug)
-  if (index < 0) return all[0]
-  return all[(index + 1) % all.length]
+function otherCases(all: Case[], slug: string, limit = 3): Case[] {
+  return all.filter((c) => c.slug !== slug).slice(0, limit)
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -74,7 +72,7 @@ export default async function CasePage({ params, searchParams }: Props) {
   if (!item) notFound()
 
   const all = await fetchCases()
-  const upcoming = nextCase(all, slug)
+  const related = otherCases(all, slug, 3)
   const { lead, dek } = caseOutcome(item)
 
   const breadcrumbs = breadcrumbJsonLd([
@@ -83,14 +81,15 @@ export default async function CasePage({ params, searchParams }: Props) {
     { name: item.title, url: absoluteUrl(`/works/${slug}`) },
   ])
 
+  const fixture = fixtureCases.find((c) => c.slug === slug)
+  const gallery =
+    item.gallery && item.gallery.length > 1 ? item.gallery : fixture?.gallery ?? item.gallery
   const coverKind =
-    item.gallery?.[0]?.kind ?? (/\.(mp4|webm|mov)(\?|$)/i.test(item.cover) ? 'video' : 'image')
-  const galleryRest = (item.gallery ?? []).slice(1)
+    gallery?.[0]?.kind ?? (/\.(mp4|webm|mov)(\?|$)/i.test(item.cover) ? 'video' : 'image')
+  const galleryRest = (gallery ?? []).slice(1)
   const status = item.status ?? 'published'
   const fixtureBlocks =
-    !item.description && !item.blocks?.length
-      ? fixtureCases.find((c) => c.slug === slug)?.blocks
-      : undefined
+    !item.description && !item.blocks?.length ? fixture?.blocks : undefined
   const bodyBlocks = item.blocks?.length ? item.blocks : fixtureBlocks
 
   return (
@@ -141,7 +140,9 @@ export default async function CasePage({ params, searchParams }: Props) {
             <p className="case-page__meta">
               {item.year ? `${item.year} г.` : 'Кейс'}
             </p>
-            <h1 className="case-page__brand">{item.title}</h1>
+            <h1 className="case-page__brand">
+              {/[.!?…]$/u.test(item.title.trim()) ? item.title : `${item.title}.`}
+            </h1>
             {lead ? <p className="case-page__lead">{lead}</p> : null}
             {dek ? <p className="case-page__dek">{dek}</p> : null}
           </FadeIn>
@@ -160,45 +161,48 @@ export default async function CasePage({ params, searchParams }: Props) {
 
         {galleryRest.length > 0 ? (
           <section className="case-page__gallery" aria-label="Галерея кейса">
-            {galleryRest.map((frame) =>
-              frame.kind === 'video' ? (
-                <video
-                  key={frame.src}
-                  className="case-page__gallery-video"
-                  src={frame.src}
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-              ) : (
-                <figure key={frame.src} className="case-page__gallery-frame">
-                  <Image
-                    src={frame.src}
-                    alt={frame.alt}
-                    width={1600}
-                    height={1000}
-                    className="case-page__gallery-image"
-                    sizes="(max-width: 1120px) 100vw, 1120px"
-                  />
-                </figure>
-              ),
-            )}
+            <h2 className="case-page__section-label">Галерея</h2>
+            <ul className="case-page__gallery-grid">
+              {galleryRest.map((frame) => (
+                <li key={frame.src} className="case-page__gallery-card">
+                  {frame.kind === 'video' ? (
+                    <video
+                      className="case-page__gallery-video"
+                      src={frame.src}
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <Image
+                      src={frame.src}
+                      alt={frame.alt}
+                      width={640}
+                      height={480}
+                      className="case-page__gallery-image"
+                      sizes="(max-width: 720px) 50vw, (max-width: 960px) 33vw, 25vw"
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {related.length > 0 ? (
+          <section className="case-page__related" aria-labelledby="case-related-heading">
+            <h2 id="case-related-heading" className="case-page__section-label">
+              Другие кейсы
+            </h2>
+            <div className="case-page__related-grid">
+              {related.map((relatedCase) => (
+                <CaseCard key={relatedCase.slug} item={relatedCase} />
+              ))}
+            </div>
           </section>
         ) : null}
 
         <footer className="case-page__footer">
-          {upcoming ? (
-            <Link href={`/works/${upcoming.slug}`} className="case-page__next">
-              <span className="case-page__next-label">Следующий кейс</span>
-              <span className="case-page__next-title">{upcoming.title}</span>
-              {upcoming.summary || upcoming.heroTitle ? (
-                <span className="case-page__next-summary">
-                  {upcoming.summary || upcoming.heroTitle}
-                </span>
-              ) : null}
-            </Link>
-          ) : null}
-
           <Link href="/works" className="case-page__back">
             ← Все работы
           </Link>

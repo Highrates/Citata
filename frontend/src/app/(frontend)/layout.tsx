@@ -37,6 +37,7 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         <SiteChrome
           telegramChannelUrl={settings.telegramChannelUrl}
           telegramBotUrl={settings.telegramBotUrl}
+          infoEmail={settings.infoEmail}
           legal={settings.legal}
         >
           {children}

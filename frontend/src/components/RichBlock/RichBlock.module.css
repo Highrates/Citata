@@ -543,20 +543,30 @@
   background: var(--color-white);
 }
 
+/* Prose rhythm aligned with public case page / Significa */
 .proseMirror {
+  --rb-prose-fs: 1.25rem;
+  --rb-prose-lh: 1.5;
+  --rb-h2-fs: 1.75rem;
+  --rb-h2-lh: 1.15;
+  --rb-h3-fs: 1.5rem;
+  --rb-h3-lh: 1.35;
   min-height: 220px;
-  padding: 12px 15px;
+  padding: 16px 18px;
   box-sizing: border-box;
   outline: none;
   font-family: inherit;
-  font-size: var(--text-body, 1rem);
-  line-height: 1.5;
+  font-size: var(--rb-prose-fs);
+  line-height: var(--rb-prose-lh);
   color: var(--color-ink-black, #051826);
 }
 
 .variantAdmin .proseMirror {
-  font-size: 0.9375rem;
-  padding: 10px 12px;
+  /* Keep editor readable in admin chrome, same hierarchy ratios */
+  --rb-prose-fs: 1.125rem;
+  --rb-h2-fs: 1.5rem;
+  --rb-h3-fs: 1.3125rem;
+  padding: 12px 14px;
 }
 
 .proseMirror :global(p.is-editor-empty:first-child::before) {
@@ -567,43 +577,87 @@
   height: 0;
 }
 
+.proseMirror :global(p) {
+  margin: 0 0 1.15em;
+}
+
 .proseMirror :global(img),
 .proseMirror :global(video) {
   max-width: 100%;
   height: auto;
   display: block;
+  margin: 1.5em 0;
 }
 
 .proseMirror :global(a) {
-  color: var(--color-blue);
+  color: var(--color-blue, #2563eb);
   text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .proseMirror :global(ul),
 .proseMirror :global(ol) {
+  margin: 0 0 1.15em;
   padding-left: 1.5em;
-  margin: 0.5em 0;
+}
+
+.proseMirror :global(ul) {
+  list-style: disc;
+}
+
+.proseMirror :global(ol) {
+  list-style: decimal;
+}
+
+.proseMirror :global(li) {
+  margin: 0 0 0.5em;
+  padding-left: 0.15em;
+}
+
+.proseMirror :global(li:last-child) {
+  margin-bottom: 0;
 }
 
 .proseMirror :global(h1),
 .proseMirror :global(h2),
 .proseMirror :global(h3) {
-  margin: 0.6em 0 0.35em;
-  line-height: 1.25;
+  margin: 1.75em 0 0.7em;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: inherit;
+}
+
+.proseMirror :global(h1),
+.proseMirror :global(h2) {
+  font-size: var(--rb-h2-fs);
+  line-height: var(--rb-h2-lh);
+}
+
+.proseMirror :global(h3) {
+  font-size: var(--rb-h3-fs);
+  line-height: var(--rb-h3-lh);
+}
+
+.proseMirror :global(h1:first-child),
+.proseMirror :global(h2:first-child),
+.proseMirror :global(h3:first-child),
+.proseMirror :global(p:first-child) {
+  margin-top: 0;
 }
 
 .proseMirror :global(blockquote) {
-  margin: 0.75em 0;
-  padding: 10px 14px;
-  border-left: 2px solid rgba(5, 24, 38, 0.2);
-  color: var(--color-ink-black, #051826);
+  margin: 1.5em 0;
+  padding: 0.15em 0 0.15em 1.25em;
+  border-left: 2px solid rgba(5, 24, 38, 0.22);
+  font-style: normal;
+  color: inherit;
 }
 
 .proseMirror :global(hr) {
   border: none;
   border-top: 1px solid var(--account-hairline-color, #e2e6e8);
-  margin: 1.25em 0;
+  margin: 2em 0;
 }
 
 /* Пресеты: data-* + классы case-media-* (как кнопки тулбара). */

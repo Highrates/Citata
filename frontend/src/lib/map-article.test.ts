@@ -107,4 +107,6 @@ test('mapPayloadArticleToArticle resolves cover, author and sections', () => {
   assert.equal(mapped.coverAlt, 'Обложка')
   assert.deepEqual(mapped.author, { name: 'Ольга Трегубова', role: 'Редактор', photo: undefined })
   assert.deepEqual(mapped.sections, [{ type: 'paragraph', text: 'Hello' }])
+  assert.equal(mapped.description, '<p>Hello</p>')
+  assert.equal(mapped.status, 'draft')
 })

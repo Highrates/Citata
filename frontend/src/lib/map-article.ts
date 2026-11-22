@@ -1,4 +1,4 @@
-import type { Article, ArticleSection } from '@/content/types'
+import type { Article, ArticleSection, ArticleStatus, CaseGalleryItem } from '@/content/types'
 import type { Article as PayloadArticle, Author, Media } from '@/payload-types'
 import { lexicalToSections } from '@/lib/lexical-utils'
 import { resolveMediaAlt, resolveMediaUrl } from '@/lib/media-url'
@@ -8,6 +8,57 @@ type PayloadArticleSection = NonNullable<PayloadArticle['sections']>[number]
 /** Legacy: поле `content` с Lexical до унификации схемы */
 type LegacyArticleContent = {
   content?: Parameters<typeof lexicalToSections>[0]
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+export function sectionsToHtml(sections: ArticleSection[]): string {
+  return sections
+    .map((section) => {
+      switch (section.type) {
+        case 'paragraph':
+          return `<p>${escapeHtml(section.text)}</p>`
+        case 'heading':
+          return `<h2>${escapeHtml(section.text)}</h2>`
+        case 'quote':
+          return `<blockquote><p>${escapeHtml(section.text)}</p></blockquote>`
+        case 'list':
+          return `<ul>${section.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+        default:
+          return ''
+      }
+    })
+    .filter(Boolean)
+    .join('')
+}
+
+function mediaKind(media: number | Media | null | undefined): 'image' | 'video' {
+  if (!media || typeof media === 'number') return 'image'
+  const mime = media.mimeType ?? ''
+  if (mime.startsWith('video/')) return 'video'
+  const url = media.url ?? media.filename ?? ''
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return 'video'
+  return 'image'
+}
+
+function mapGallery(doc: PayloadArticle): CaseGalleryItem[] {
+  const items: CaseGalleryItem[] = []
+  for (const row of doc.gallery ?? []) {
+    const src = resolveMediaUrl(row.media)
+    if (!src) continue
+    items.push({
+      src,
+      alt: resolveMediaAlt(row.media, doc.title),
+      kind: mediaKind(row.media),
+    })
+  }
+  return items
 }
 
 export function mapPayloadSectionToArticleSection(
@@ -37,6 +88,8 @@ export function mapPayloadSectionToArticleSection(
 export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleContent): Article {
   const coverMedia = doc.cover as number | Media
   const authorRef = doc.author as number | Author
+  const gallery = mapGallery(doc)
+  const coverFromGallery = gallery[0]?.src
 
   const sectionsFromBlocks = (doc.sections ?? [])
     .map(mapPayloadSectionToArticleSection)
@@ -47,12 +100,18 @@ export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleCo
       ? sectionsFromBlocks
       : lexicalToSections(doc.content)
 
+  const description =
+    doc.description?.trim() ||
+    (sections.length ? sectionsToHtml(sections) : undefined)
+
+  const status = (doc.status as ArticleStatus | null | undefined) ?? 'draft'
+
   return {
     slug: doc.slug,
     title: doc.title,
     excerpt: doc.excerpt ?? '',
-    cover: resolveMediaUrl(coverMedia) ?? '',
-    coverAlt: resolveMediaAlt(coverMedia, doc.title),
+    cover: coverFromGallery || resolveMediaUrl(coverMedia) || '',
+    coverAlt: gallery[0]?.alt || resolveMediaAlt(coverMedia, doc.title),
     author:
       typeof authorRef === 'number'
         ? { name: 'Автор', role: '' }
@@ -64,6 +123,19 @@ export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleCo
     publishedAt: doc.publishedAt,
     readingTime: doc.readingTime ?? 3,
     featured: doc.featured ?? false,
+    status,
+    description,
+    gallery: gallery.length
+      ? gallery
+      : coverFromGallery || resolveMediaUrl(coverMedia)
+        ? [
+            {
+              src: coverFromGallery || resolveMediaUrl(coverMedia) || '',
+              alt: resolveMediaAlt(coverMedia, doc.title),
+              kind: mediaKind(coverMedia),
+            },
+          ]
+        : undefined,
     sections,
     seo: doc.meta
       ? {
@@ -95,8 +167,9 @@ export function mapArticleSectionToPayloadSection(section: ArticleSection): Payl
 
 export function mapArticleToPayloadData(
   article: Article,
-  options?: { coverId?: number; authorId?: number },
+  options?: { coverId?: number; authorId?: number; galleryMediaIds?: number[] },
 ) {
+  const status: ArticleStatus = article.status ?? 'published'
   return {
     title: article.title,
     slug: article.slug,
@@ -106,8 +179,10 @@ export function mapArticleToPayloadData(
     publishedAt: article.publishedAt,
     readingTime: article.readingTime,
     featured: article.featured ?? false,
+    status,
+    description: article.description || null,
+    gallery: options?.galleryMediaIds?.map((media) => ({ media })),
     sections: article.sections.map(mapArticleSectionToPayloadSection),
-    status: 'published' as const,
     meta: article.seo
       ? {
           title: article.seo.title,

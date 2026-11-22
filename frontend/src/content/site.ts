@@ -9,7 +9,7 @@ export const siteSettings: SiteSettings = {
   heroTitle: 'Привлекаем внимание к бизнесу, стартапу или мероприятию',
   heroSubtitle: 'PR-агентство',
   telegramBotUrl: 'https://t.me/citata_pr_bot',
-  telegramChannelUrl: 'https://t.me/citata_pr',
+  telegramChannelUrl: 'https://t.me/citatapr',
   infoEmail: 'info@citata-pr.ru',
   aboutText:
     'PR-агентство. Мы видим, как за годы сотрудничества клиенты становятся востребованными, а их компании узнаваемыми. Интерес и доверие к брендам растёт как со стороны аудитории, так и со стороны СМИ. Со многими мы переходим от формата работы с исходящими предложениями редакторам на фильтр входящих запросов. Потому что эффект от пиара накапливается и медиа уже сами приглашают делать публикации, давать интервью и выступать.',
@@ -26,11 +26,13 @@ export const siteSettings: SiteSettings = {
       name: 'Екатерина Колесник',
       role: 'CEO',
       email: 'communikate@citata-pr.ru',
+      telegram: 'https://t.me/kate_kolesnik',
     },
     {
       name: 'Олеся Колесникова',
       role: 'Head of sales',
       email: 'olesya.kolesnikova@citata-pr.ru',
+      telegram: 'https://t.me/kolleska',
     },
   ],
   legal: {

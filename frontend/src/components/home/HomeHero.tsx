@@ -21,7 +21,7 @@ const navItems = [
   { href: '/about', label: 'Мы' },
   { href: '/works', label: 'Кейсы' },
   { href: '/services', label: 'Услуги' },
-  { href: '/vacancies', label: 'Вакансии' },
+  { href: '/articles', label: 'Новости' },
   { href: '/contacts', label: 'Контакты' },
 ] as const
 
@@ -98,7 +98,7 @@ export function HomeHero({ email, telegramUrl, cases }: HomeHeroProps) {
 
   return (
     <section ref={rootRef} className="home-hero" aria-label="ЦИТАТА">
-      <HomeScrollHeader />
+      <HomeScrollHeader email={email} telegramUrl={telegramUrl} />
 
       <div className="home-hero__inner">
         <h1 className="home-hero__brand">
@@ -119,7 +119,7 @@ export function HomeHero({ email, telegramUrl, cases }: HomeHeroProps) {
             ))}
           </ul>
 
-          <nav className="home-hero__col home-hero__nav" aria-label="Навигация">
+          <nav className="home-hero__col home-hero__nav hide-mobile" aria-label="Навигация">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} className="home-hero__nav-link">
                 {item.label}

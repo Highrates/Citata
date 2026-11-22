@@ -11,33 +11,63 @@ export const revalidate = 300
 
 export default async function ContactsPage() {
   const settings = await fetchSiteSettings()
+  const channelUrl = settings.telegramChannelUrl || 'https://t.me/citatapr'
 
   return (
-    <section className="section container">
-      <FadeIn>
-        <h1 className="page-title">Контакты</h1>
-        <p className="page-subtitle" style={{ textTransform: 'none' }}>
-          <a href={`mailto:${settings.infoEmail}`}>{settings.infoEmail}</a>
-        </p>
-        <a
-          href={settings.telegramBotUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="contacts-cta"
-        >
-          консультация →
-        </a>
+    <section className="contacts-page" aria-label="Контакты">
+      <h1 className="sr-only">Контакты</h1>
+
+      <FadeIn className="contacts-page__people">
+        {settings.contacts.map((contact) => (
+          <article key={contact.email || contact.name} className="contact-person">
+            <div className="contact-person__who">
+              <h2 className="contact-person__name">{contact.name}</h2>
+              {contact.role ? <p className="contact-person__role">{contact.role}</p> : null}
+            </div>
+
+            {contact.email ? (
+              <a href={`mailto:${contact.email}`} className="contact-person__email">
+                {contact.email}
+              </a>
+            ) : null}
+
+            {contact.telegram ? (
+              <a
+                href={contact.telegram}
+                className="contact-person__telegram"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Телеграм
+              </a>
+            ) : null}
+          </article>
+        ))}
       </FadeIn>
 
-      <div className="contacts-grid">
-        {settings.contacts.map((contact) => (
-          <div key={contact.email} className="contact-card">
-            <h2>{contact.name}</h2>
-            <p>{contact.role}</p>
-            <a href={`mailto:${contact.email}`}>{contact.email}</a>
-          </div>
-        ))}
-      </div>
+      <FadeIn className="contacts-page__bar" delay={0.08}>
+        <a href={`mailto:${settings.infoEmail}`} className="contacts-page__info-email">
+          {settings.infoEmail}
+        </a>
+
+        {settings.telegramBotUrl ? (
+          <a
+            href={settings.telegramBotUrl}
+            className="contacts-page__consult"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Консультация
+          </a>
+        ) : null}
+
+        <p className="contacts-page__channel">
+          Лучшие материалы о пиаре в нашем{' '}
+          <a href={channelUrl} target="_blank" rel="noreferrer">
+            телеграм-канале
+          </a>
+        </p>
+      </FadeIn>
     </section>
   )
 }

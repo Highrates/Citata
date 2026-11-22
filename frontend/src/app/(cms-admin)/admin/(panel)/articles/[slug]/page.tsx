@@ -21,5 +21,12 @@ export default async function CmsArticleEditPage({
   const { item, source } = await fetchAdminArticleBySlug(slug)
   if (!item) notFound()
 
-  return <ArticleEditForm item={item} source={source} {...flashFromSearchParams(sp)} />
+  return (
+    <ArticleEditForm
+      key={item.slug}
+      item={item}
+      source={source}
+      {...flashFromSearchParams(sp)}
+    />
+  )
 }

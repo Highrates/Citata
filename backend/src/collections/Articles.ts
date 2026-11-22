@@ -49,6 +49,30 @@ export const Articles: CollectionConfig = {
       relationTo: 'media',
       required: true,
       label: 'Обложка',
+      admin: {
+        description: 'Синхронизируется с первым элементом галереи',
+      },
+    },
+    {
+      name: 'gallery',
+      type: 'array',
+      label: 'Галерея',
+      labels: {
+        singular: 'Медиа',
+        plural: 'Медиа',
+      },
+      admin: {
+        description: 'Первое фото или видео — обложка статьи',
+      },
+      fields: [
+        {
+          name: 'media',
+          type: 'upload',
+          relationTo: 'media',
+          required: true,
+          label: 'Файл',
+        },
+      ],
     },
     {
       name: 'author',
@@ -78,10 +102,21 @@ export const Articles: CollectionConfig = {
       },
     },
     {
+      name: 'description',
+      type: 'textarea',
+      label: 'Текст статьи (HTML)',
+      admin: {
+        description: 'Основной текст статьи (RichBlock)',
+      },
+    },
+    {
       name: 'sections',
       type: 'blocks',
-      label: 'Содержание',
-      required: true,
+      label: 'Содержание (legacy)',
+      required: false,
+      admin: {
+        description: 'Устаревшие секции — предпочтителен HTML в description',
+      },
       blocks: [
         {
           slug: 'paragraph',

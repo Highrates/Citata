@@ -83,11 +83,17 @@ export function mapPayloadSiteSettingsToSiteSettings(doc: SiteSetting): SiteSett
       reachMillions: doc.aboutStats?.reachMillions ?? fallback.aboutStats.reachMillions,
     },
     aboutGallery: mapAboutGallery(doc),
-    contacts: (doc.contacts ?? fallback.contacts).map((contact) => ({
-      name: contact.name,
-      role: contact.role ?? '',
-      email: contact.email ?? '',
-    })),
+    contacts: (doc.contacts ?? fallback.contacts).map((contact) => {
+      const fallbackContact = fallback.contacts.find(
+        (item) => item.email && item.email === contact.email,
+      )
+      return {
+        name: contact.name,
+        role: contact.role ?? '',
+        email: contact.email ?? '',
+        telegram: contact.telegram || fallbackContact?.telegram,
+      }
+    }),
     legal: {
       disclaimer: doc.legal?.disclaimer ?? fallback.legal.disclaimer,
       companyName: doc.legal?.companyName ?? fallback.legal.companyName,

@@ -37,7 +37,6 @@ export function PressPageClient({ items: initialItems, source, saved, error }: P
   return (
     <>
       <h1 className="admin-title">Пресса</h1>
-      <p className="admin-lead">Блок «Здесь пишут о нас». Перетащите строки для изменения порядка.</p>
 
       <AdminSourceBanner source={source} />
       <AdminFlash saved={saved} error={error} />

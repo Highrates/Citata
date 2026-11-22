@@ -133,6 +133,7 @@ export const SiteSettings: GlobalConfig = {
         { name: 'name', type: 'text', required: true, label: 'Имя' },
         { name: 'role', type: 'text', label: 'Должность' },
         { name: 'email', type: 'email', label: 'Email' },
+        { name: 'telegram', type: 'text', label: 'Telegram URL' },
       ],
     },
     {

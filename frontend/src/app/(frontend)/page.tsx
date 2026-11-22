@@ -31,7 +31,7 @@ export default async function HomePage() {
       />
 
       <HomeHero
-        email="citata.pr@gmail.com"
+        email={settings.infoEmail || 'info@citata-pr.ru'}
         telegramUrl={settings.telegramChannelUrl}
         cases={featuredCases}
       />

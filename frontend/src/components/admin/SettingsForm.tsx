@@ -16,7 +16,6 @@ export function SettingsForm({ settings, source, saved, error }: SettingsFormPro
   return (
     <>
       <h1 className="admin-title">Настройки сайта</h1>
-      <p className="admin-lead">Контакты, Telegram, юридическая информация. Текст «О нас» — в разделе О нас.</p>
 
       <AdminSourceBanner source={source} />
       <AdminFlash saved={saved} error={error} />

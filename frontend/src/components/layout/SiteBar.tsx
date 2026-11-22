@@ -5,6 +5,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import gsap from 'gsap'
 
+const MOBILE_MQ = '(max-width: 960px)'
+
 const headerNavItems = [
   { href: '/works', label: 'КЕЙСЫ' },
   { href: '/services', label: 'УСЛУГИ' },
@@ -16,18 +18,23 @@ const menuNavItems = [
   { href: '/works', label: 'Кейсы' },
   { href: '/services', label: 'Услуги' },
   { href: '/about', label: 'О нас' },
-  { href: '/articles', label: 'Блог' },
+  { href: '/articles', label: 'Новости' },
   { href: '/contacts', label: 'Контакты' },
-  { href: '/vacancies', label: 'Вакансии' },
 ] as const
 
 type SiteBarProps = {
-  /** reveal — появляется после ухода hero (главная); always — сразу виден */
+  /** reveal — появляется после ухода hero (главная, desktop); always — сразу виден */
   mode?: 'reveal' | 'always'
+  email?: string
+  telegramUrl?: string
 }
 
 /** Compact site header + Apostrophe-style full-screen burger menu. */
-export function SiteBar({ mode = 'always' }: SiteBarProps) {
+export function SiteBar({
+  mode = 'always',
+  email = 'info@citata-pr.ru',
+  telegramUrl = 'https://t.me/citatapr',
+}: SiteBarProps) {
   const [visible, setVisible] = useState(mode === 'always')
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -35,6 +42,7 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
   const linksRef = useRef<HTMLElement>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const prefersReducedRef = useRef(false)
+  const mobileRef = useRef(false)
 
   useEffect(() => {
     prefersReducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -46,14 +54,36 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
       return
     }
 
+    const mq = window.matchMedia(MOBILE_MQ)
     const hero = document.querySelector('.home-hero__inner')
+
+    const sync = () => {
+      mobileRef.current = mq.matches
+      if (mq.matches) {
+        setVisible(true)
+        return
+      }
+      if (!hero) {
+        setVisible(true)
+        return
+      }
+      const rect = hero.getBoundingClientRect()
+      setVisible(rect.bottom <= 8)
+    }
+
+    sync()
+    mq.addEventListener('change', sync)
+
     if (!hero) {
-      setVisible(true)
-      return
+      return () => mq.removeEventListener('change', sync)
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
+        if (mobileRef.current) {
+          setVisible(true)
+          return
+        }
         const show = !entry.isIntersecting
         setVisible(show)
         if (!show) setOpen(false)
@@ -62,7 +92,10 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
     )
 
     observer.observe(hero)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      mq.removeEventListener('change', sync)
+    }
   }, [mode])
 
   useEffect(() => {
@@ -85,33 +118,36 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
     if (!mounted || !menuRef.current || !linksRef.current) return
 
     const menu = menuRef.current
-    const items = linksRef.current.querySelectorAll<HTMLElement>('.home-bar__menu-link')
+    const tracks = linksRef.current.querySelectorAll<HTMLElement>('.home-bar__menu-link-track')
     const reduced = prefersReducedRef.current
 
     tlRef.current?.kill()
 
     if (open) {
       if (reduced) {
-        gsap.set(menu, { autoAlpha: 1, clipPath: 'inset(0 0 0% 0)' })
-        gsap.set(items, { yPercent: 0, autoAlpha: 1 })
+        gsap.set(menu, { autoAlpha: 1, clipPath: 'inset(0% 0% 0% 0%)' })
+        gsap.set(tracks, { yPercent: 0 })
         return
       }
 
-      gsap.set(menu, { autoAlpha: 1 })
-      gsap.set(items, { yPercent: 110, autoAlpha: 1 })
+      gsap.set(menu, { autoAlpha: 1, clipPath: 'inset(0% 0% 100% 0%)' })
+      gsap.set(tracks, { yPercent: 110 })
 
       const tl = gsap.timeline()
-      tl.fromTo(
+      tl.to(
         menu,
-        { clipPath: 'inset(0 0 100% 0)' },
-        { clipPath: 'inset(0 0 0% 0)', duration: 0.55, ease: 'power3.inOut' },
+        {
+          clipPath: 'inset(0% 0% 0% 0%)',
+          duration: 0.55,
+          ease: 'power3.inOut',
+        },
         0,
       ).to(
-        items,
+        tracks,
         {
           yPercent: 0,
-          duration: 0.7,
-          stagger: 0.055,
+          duration: 0.65,
+          stagger: 0.05,
           ease: 'power3.out',
         },
         0.18,
@@ -120,7 +156,6 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
       return
     }
 
-    // close
     if (reduced) {
       gsap.set(menu, { autoAlpha: 0 })
       setMounted(false)
@@ -130,20 +165,20 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
     const tl = gsap.timeline({
       onComplete: () => setMounted(false),
     })
-    tl.to(items, {
+    tl.to(tracks, {
       yPercent: -110,
-      duration: 0.4,
-      stagger: 0.035,
+      duration: 0.36,
+      stagger: 0.03,
       ease: 'power2.in',
     })
       .to(
         menu,
         {
-          clipPath: 'inset(0 0 100% 0)',
-          duration: 0.45,
+          clipPath: 'inset(0% 0% 100% 0%)',
+          duration: 0.42,
           ease: 'power3.inOut',
         },
-        '-=0.12',
+        '-=0.14',
       )
       .set(menu, { autoAlpha: 0 })
 
@@ -180,7 +215,7 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
           <Image src="/images/logo-2.svg" alt="" width={26} height={38} priority />
         </Link>
 
-        <nav className="home-bar__nav" aria-label="Навигация">
+        <nav className="home-bar__nav hide-mobile" aria-label="Навигация">
           {headerNavItems.map((item) => (
             <Link key={item.href} href={item.href} className="home-bar__link" onClick={closeMenu}>
               {item.label}
@@ -221,6 +256,21 @@ export function SiteBar({ mode = 'always' }: SiteBarProps) {
               </Link>
             ))}
           </nav>
+
+          <div className="home-bar__menu-meta">
+            <a href={`mailto:${email}`} className="home-bar__menu-meta-link" onClick={closeMenu}>
+              {email}
+            </a>
+            <a
+              href={telegramUrl}
+              className="home-bar__menu-meta-link"
+              target="_blank"
+              rel="noreferrer"
+              onClick={closeMenu}
+            >
+              Telegram ↗
+            </a>
+          </div>
         </div>
       ) : null}
     </header>

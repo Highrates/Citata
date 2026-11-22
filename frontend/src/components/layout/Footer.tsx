@@ -5,6 +5,8 @@ import type { SiteSettings } from '@/content/types'
 type FooterProps = Pick<SiteSettings, 'telegramChannelUrl' | 'telegramBotUrl' | 'legal'>
 
 export function Footer({ telegramChannelUrl, telegramBotUrl, legal }: FooterProps) {
+  const channelUrl = telegramChannelUrl || 'https://t.me/citatapr'
+
   return (
     <footer className="site-footer">
       <Link href="/" className="site-footer__brand" aria-label="ЦИТАТА — на главную">
@@ -14,9 +16,9 @@ export function Footer({ telegramChannelUrl, telegramBotUrl, legal }: FooterProp
 
       <div className="site-footer__meta">
         <p className="site-footer__tagline">
-          Агентство информационных
+          Агентство информационных технологий
           <br />
-          технологий &amp; коммуникаций
+          &amp; коммуникаций
         </p>
 
         <div className="site-footer__actions">
@@ -31,14 +33,12 @@ export function Footer({ telegramChannelUrl, telegramBotUrl, legal }: FooterProp
             </a>
           ) : null}
 
-          {telegramChannelUrl ? (
-            <p className="site-footer__channel">
-              Лучшие материалы о пиаре в нашем{' '}
-              <a href={telegramChannelUrl} target="_blank" rel="noreferrer">
-                телеграм-канале
-              </a>
-            </p>
-          ) : null}
+          <p className="site-footer__channel">
+            Лучшие материалы о пиаре в нашем{' '}
+            <a href={channelUrl} target="_blank" rel="noreferrer">
+              телеграм-канале
+            </a>
+          </p>
         </div>
       </div>
 

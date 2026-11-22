@@ -108,7 +108,7 @@ export function ArticlePageContent({
       ) : null}
 
       <div className="article-page__body">
-        <ArticleBody sections={item.sections} />
+        <ArticleBody sections={item.sections} description={item.description} />
       </div>
 
       <div className="article-page__author">
