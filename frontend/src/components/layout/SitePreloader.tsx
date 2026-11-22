@@ -19,10 +19,10 @@ const FALLBACK_FRAME: GalleryItem = {
   kind: 'image',
 }
 
-/** About-style burst; total mobile show time before exit = 3s from start. */
+/** About-style burst; flip a bit under 3s, then curtain exit. */
 const BURST_MS = 90
-const MOBILE_ACTIVE_MS = 3000
-const HOLD_AFTER_MS = 120
+const MOBILE_ACTIVE_MS = 2200
+const HOLD_AFTER_MS = 200
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | void> {
   return Promise.race([
@@ -179,19 +179,19 @@ export function SitePreloader({
           )
         }
         if (stack) {
-          exitTl.to(stack, { scale: 1.04, duration: 0.5, ease: 'power2.inOut' }, 0.06)
+          exitTl.to(stack, { scale: 1.04, duration: 0.55, ease: 'power2.inOut' }, 0.06)
         }
         if (curtainLeft && curtainRight) {
           exitTl
             .to(
               curtainLeft,
-              { xPercent: 0, duration: 0.55, ease: 'power3.inOut' },
-              0.15,
+              { xPercent: 0, duration: 0.65, ease: 'power3.inOut' },
+              0.18,
             )
             .to(
               curtainRight,
-              { xPercent: 0, duration: 0.55, ease: 'power3.inOut' },
-              0.15,
+              { xPercent: 0, duration: 0.65, ease: 'power3.inOut' },
+              0.18,
             )
             .add(() => {
               // Unlock home CSS opacity, start intro, then drop preloader (curtains already --bg)
@@ -264,7 +264,7 @@ export function SitePreloader({
       .then(() => runBurstThenExit())
       .catch(() => runBurstThenExit())
 
-    safetyTimer = setTimeout(runMobileExit, prefersReducedMotion ? 900 : 3600)
+    safetyTimer = setTimeout(runMobileExit, prefersReducedMotion ? 900 : 3200)
 
     return () => {
       cancelled = true

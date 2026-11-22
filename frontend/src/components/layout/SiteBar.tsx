@@ -143,7 +143,7 @@ export function SiteBar({
       const nodes = [
         burgerRef.current,
         ...Array.from(menu.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)),
-      ].filter((el): el is HTMLElement => Boolean(el) && el.offsetParent !== null)
+      ].filter((el): el is HTMLElement => el != null && el.offsetParent !== null)
       return nodes
     }
 
