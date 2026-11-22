@@ -1,7 +1,7 @@
-import type { Service, SiteSettings } from '@/content/types'
+import type { CaseGalleryItem, Service, SiteSettings } from '@/content/types'
 import type { Media, SiteSetting } from '@/payload-types'
 import { siteSettings as fixtureSiteSettings } from '@/content/site'
-import { resolveMediaUrl } from '@/lib/media-url'
+import { resolveMediaAlt, resolveMediaUrl } from '@/lib/media-url'
 import { slugify } from '@/lib/slugify'
 
 type AssetKey = keyof SiteSettings['assets']
@@ -11,6 +11,31 @@ function resolveAsset(
   fallback: string,
 ): string {
   return resolveMediaUrl(media) ?? fallback
+}
+
+function mediaKind(media: number | Media | null | undefined): 'image' | 'video' {
+  if (!media || typeof media === 'number') return 'image'
+  const mime = media.mimeType ?? ''
+  if (mime.startsWith('video/')) return 'video'
+  const url = media.url ?? media.filename ?? ''
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return 'video'
+  return 'image'
+}
+
+function mapAboutGallery(doc: SiteSetting): CaseGalleryItem[] {
+  if (doc.aboutGallery == null) return fixtureSiteSettings.aboutGallery
+
+  const items: CaseGalleryItem[] = []
+  for (const row of doc.aboutGallery) {
+    const src = resolveMediaUrl(row.media)
+    if (!src) continue
+    items.push({
+      src,
+      alt: resolveMediaAlt(row.media, 'О нас'),
+      kind: mediaKind(row.media),
+    })
+  }
+  return items
 }
 
 function mapServices(
@@ -57,6 +82,7 @@ export function mapPayloadSiteSettingsToSiteSettings(doc: SiteSetting): SiteSett
       brands: doc.aboutStats?.brands ?? fallback.aboutStats.brands,
       reachMillions: doc.aboutStats?.reachMillions ?? fallback.aboutStats.reachMillions,
     },
+    aboutGallery: mapAboutGallery(doc),
     contacts: (doc.contacts ?? fallback.contacts).map((contact) => ({
       name: contact.name,
       role: contact.role ?? '',
@@ -77,6 +103,7 @@ export function mapPayloadSiteSettingsToSiteSettings(doc: SiteSetting): SiteSett
 export function mapSiteSettingsToPayloadData(
   settings: SiteSettings,
   assetIds?: Partial<Record<AssetKey, number>>,
+  aboutGalleryMediaIds?: number[],
 ) {
   return {
     tagline: settings.tagline,
@@ -88,6 +115,7 @@ export function mapSiteSettingsToPayloadData(
     telegramChannelUrl: settings.telegramChannelUrl,
     infoEmail: settings.infoEmail,
     aboutStats: settings.aboutStats,
+    aboutGallery: aboutGalleryMediaIds?.map((media) => ({ media })),
     contacts: settings.contacts,
     legal: settings.legal,
     mainServices: settings.mainServices.map(({ title, description }) => ({
@@ -109,4 +137,14 @@ export function mapSiteSettingsToPayloadData(
         }
       : undefined,
   }
+}
+
+export function resolveAboutGalleryMediaIds(doc: SiteSetting): number[] {
+  const ids: number[] = []
+  for (const row of doc.aboutGallery ?? []) {
+    const media = row.media
+    if (typeof media === 'number') ids.push(media)
+    else if (media && typeof media === 'object' && typeof media.id === 'number') ids.push(media.id)
+  }
+  return ids
 }
