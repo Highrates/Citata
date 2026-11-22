@@ -2,12 +2,20 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import type { Case } from '@/content/types'
 
-type CaseItem = Pick<Case, 'slug' | 'title' | 'cover' | 'coverAlt' | 'year' | 'summary'>
+export type MediaGridItem = {
+  slug: string
+  title: string
+  cover: string
+  coverAlt: string
+  summary?: string
+  href: string
+  coverKind?: 'image' | 'video'
+}
 
 type HomeCasesGridProps = {
-  cases: CaseItem[]
+  cases: MediaGridItem[]
+  label?: string
 }
 
 /**
@@ -25,30 +33,38 @@ const ROW_ASPECTS: number[][] = [
   [0.74, 0.66, 1.55], // 3
 ]
 
-type SizedCase = CaseItem & { aspect: number; key: string }
+const FIRST_FOLD_PRIORITY = 4
 
-function packRows(items: CaseItem[]): SizedCase[][] {
-  const rows: SizedCase[][] = []
+type SizedItem = MediaGridItem & { aspect: number; key: string; flatIndex: number }
+
+function isVideoCover(item: MediaGridItem) {
+  if (item.coverKind === 'video') return true
+  if (item.coverKind === 'image') return false
+  return /\.(mp4|webm|mov)(\?|$)/i.test(item.cover)
+}
+
+function packRows(items: MediaGridItem[]): SizedItem[][] {
+  const rows: SizedItem[][] = []
   let index = 0
   let patternIndex = 0
 
   while (index < items.length) {
     const pattern = ROW_ASPECTS[patternIndex % ROW_ASPECTS.length]!
     const remaining = items.length - index
-    // Prefer the pattern length; if leftover is short, fold into this row (cap 5)
     let take = Math.min(pattern.length, remaining)
     if (remaining - take > 0 && remaining - take < 3) {
       take = Math.min(5, remaining)
     }
 
-    const row: SizedCase[] = []
+    const row: SizedItem[] = []
     for (let i = 0; i < take; i++) {
       const item = items[index + i]!
       const aspect = pattern[i % pattern.length]!
       row.push({
         ...item,
         aspect,
-        key: `${item.slug}-${index + i}`,
+        key: `${item.href}-${index + i}`,
+        flatIndex: index + i,
       })
     }
     rows.push(row)
@@ -59,40 +75,50 @@ function packRows(items: CaseItem[]): SizedCase[][] {
   return rows
 }
 
-function metaLine(item: CaseItem): string | null {
-  const summary = item.summary?.trim()
-  return summary || null
-}
-
-export function HomeCasesGrid({ cases }: HomeCasesGridProps) {
+export function HomeCasesGrid({ cases, label = 'Кейсы' }: HomeCasesGridProps) {
   if (!cases.length) return null
 
   const rows = packRows(cases)
 
   return (
-    <div className="home-cases-grid" aria-label="Кейсы">
+    <div className="home-cases-grid" aria-label={label}>
       {rows.map((row, rowIndex) => (
         <div key={`row-${rowIndex}`} className="home-cases-grid__row">
           {row.map((item) => {
-            const meta = metaLine(item)
+            const meta = item.summary?.trim() || null
+            const video = isVideoCover(item)
             return (
               <article
                 key={item.key}
                 className="home-cases-grid__item"
                 style={{ flexGrow: item.aspect, flexBasis: 0 }}
               >
-                <Link href={`/works/${item.slug}`} className="home-cases-grid__card">
+                <Link href={item.href} className="home-cases-grid__card">
                   <div
                     className="home-cases-grid__media"
                     style={{ ['--case-aspect' as string]: String(item.aspect) }}
                   >
-                    <Image
-                      src={item.cover}
-                      alt={item.coverAlt}
-                      fill
-                      sizes="(max-width: 560px) 100vw, (max-width: 960px) 50vw, 20vw"
-                      className="home-cases-grid__image"
-                    />
+                    {video ? (
+                      <video
+                        className="home-cases-grid__image home-cases-grid__video"
+                        src={item.cover}
+                        muted
+                        playsInline
+                        autoPlay
+                        loop
+                        preload="metadata"
+                        aria-label={item.coverAlt}
+                      />
+                    ) : (
+                      <Image
+                        src={item.cover}
+                        alt={item.coverAlt}
+                        fill
+                        priority={item.flatIndex < FIRST_FOLD_PRIORITY}
+                        sizes="(max-width: 560px) 100vw, (max-width: 960px) 50vw, 20vw"
+                        className="home-cases-grid__image"
+                      />
+                    )}
                   </div>
                   <div className="home-cases-grid__info">
                     <h3 className="home-cases-grid__title">{item.title}</h3>

@@ -38,6 +38,15 @@
   display: flex;
   flex-direction: row;
   background: #f7f7f7;
+  position: relative;
+}
+
+.admin-topbar {
+  display: none;
+}
+
+.admin-nav-backdrop {
+  display: none;
 }
 
 .admin-body {
@@ -62,6 +71,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .admin-brand {
@@ -242,12 +252,53 @@
 }
 
 .admin-success {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: #1e6b2f;
+  font-size: 0.875rem;
+}
+
+.admin-flash {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 8px;
+}
+
+.admin-flash--success {
   background: #e6f4ea;
-  color: #1e6b2f;
-  font-size: 0.875rem;
+}
+
+.admin-flash--error {
+  background: #fdf5f5;
+}
+
+.admin-flash .admin-error {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.admin-flash__dismiss {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-flash__dismiss:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .admin-back-link {
@@ -687,6 +738,8 @@ a.admin-btn:focus {
 
 .admin-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   border-radius: 12px;
   border: var(--account-hairline-width) solid var(--account-hairline-color);
   background: var(--color-white);
@@ -1119,7 +1172,7 @@ a.admin-btn:focus {
 }
 
 /* Case editor */
-.case-edit-head {
+.admin-edit-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1127,25 +1180,25 @@ a.admin-btn:focus {
   margin-bottom: 8px;
 }
 
-.case-edit-head__meta {
+.admin-edit-head__meta {
   margin: 4px 0 0;
 }
 
-.case-edit-layout {
+.admin-edit-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 24px;
   align-items: start;
 }
 
-.case-edit-main {
+.admin-edit-main {
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-width: 0;
 }
 
-.case-edit-section {
+.admin-edit-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1155,32 +1208,32 @@ a.admin-btn:focus {
   border-radius: 8px;
 }
 
-.case-edit-section__head {
+.admin-edit-section__head {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.case-edit-section__head--row {
+.admin-edit-section__head--row {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.case-edit-section__title {
+.admin-edit-section__title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
   color: var(--color-black);
 }
 
-.case-edit-aside {
+.admin-edit-aside {
   position: sticky;
   top: 16px;
 }
 
-.case-edit-card {
+.admin-edit-card {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1190,7 +1243,7 @@ a.admin-btn:focus {
   border-radius: 8px;
 }
 
-.case-edit-check {
+.admin-edit-check {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1199,12 +1252,12 @@ a.admin-btn:focus {
   cursor: pointer;
 }
 
-.case-edit-check--disabled {
+.admin-edit-check--disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.case-edit-check input[type='checkbox'] {
+.admin-edit-check input[type='checkbox'] {
   width: 18px;
   height: 18px;
   margin: 0;
@@ -1213,11 +1266,11 @@ a.admin-btn:focus {
   cursor: pointer;
 }
 
-.case-edit-check--disabled input[type='checkbox'] {
+.admin-edit-check--disabled input[type='checkbox'] {
   cursor: not-allowed;
 }
 
-.case-edit-aside__actions {
+.admin-edit-aside__actions {
   margin-top: 4px;
 }
 
@@ -1235,11 +1288,11 @@ a.admin-btn:focus {
   text-decoration: underline;
 }
 
-.case-edit-dirty {
+.admin-edit-dirty {
   color: #b45309;
 }
 
-.case-edit-dirty-hint {
+.admin-edit-dirty-hint {
   margin: 0;
   font-size: 12px;
   color: #b45309;
@@ -1271,6 +1324,14 @@ a.admin-btn:focus {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.service-cover-actions {
+  margin-top: 16px;
+}
+
+.service-cover-alt {
+  margin-top: 16px;
 }
 
 .case-gallery-card__alt {
@@ -1445,11 +1506,105 @@ a.admin-btn:focus {
 }
 
 @media (max-width: 960px) {
-  .case-edit-layout {
+  .admin-edit-layout {
     grid-template-columns: 1fr;
   }
 
-  .case-edit-aside {
+  .admin-edit-aside {
     position: static;
+  }
+
+  .admin-shell {
+    flex-direction: column;
+  }
+
+  .admin-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    min-height: 48px;
+    padding: 8px 12px;
+    background: #f3f3f3;
+    border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+  }
+
+  .admin-topbar__menu {
+    height: 32px;
+    padding: 0 12px;
+    border: var(--account-hairline-width) solid var(--account-hairline-color);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-family: var(--font-inter);
+    font-size: var(--text-caption);
+    cursor: pointer;
+  }
+
+  .admin-topbar__brand {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    width: min(280px, 86vw);
+    height: 100vh;
+    min-height: 100vh;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    box-shadow: none;
+  }
+
+  .admin-shell--nav-open .admin-sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .admin-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .admin-nav-backdrop[hidden] {
+    display: none;
+  }
+
+  .admin-sidebar .admin-brand {
+    margin-top: 8px;
+  }
+
+  .admin-content {
+    width: 100%;
+    padding: 16px 14px 28px;
+  }
+
+  .admin-table {
+    min-width: 560px;
+  }
+
+  .admin-form-grid-2,
+  .admin-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page-head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .admin-edit-head {
+    flex-wrap: wrap;
+    gap: 12px;
   }
 }

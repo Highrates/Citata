@@ -7,23 +7,29 @@ import {
   useMemo,
   useRef,
   useState,
-  type DragEvent,
   type FormEvent,
 } from 'react'
 import { AdminFlash, AdminSourceBanner } from '@/components/admin/AdminFlash'
 import { AdminModal } from '@/components/admin/AdminModal'
 import {
-  CaseGalleryEditor,
+  AdminGalleryEditor,
   type GalleryFrame,
-} from '@/components/admin/CaseGalleryEditor'
-import { CasePublishAside } from '@/components/admin/CasePublishAside'
-import { CaseSeoFields } from '@/components/admin/CaseSeoFields'
-import { useCaseFormDirty } from '@/components/admin/useCaseFormDirty'
+} from '@/components/admin/AdminGalleryEditor'
+import { AdminPublishAside } from '@/components/admin/AdminPublishAside'
+import { AdminSeoFields } from '@/components/admin/AdminSeoFields'
+import {
+  initialCoverGallery,
+  serializeGallery,
+  snapshotsEqualWithGallery,
+} from '@/components/admin/galleryHelpers'
+import { useAdminFormDirty } from '@/components/admin/useAdminFormDirty'
+import { useGalleryUpload } from '@/components/admin/useGalleryUpload'
+import { useSlugAvailability } from '@/components/admin/useSlugAvailability'
 import { RichBlock } from '@/components/RichBlock/RichBlock'
-import type { Case, CaseGalleryItem, CaseStatus } from '@/content/types'
+import type { Case, CaseStatus } from '@/content/types'
 import type { AdminDataSource } from '@/lib/admin/data'
 import { checkCaseSlugAction, deleteCaseAction, saveCaseAction } from '@/lib/admin/content-actions'
-import { uploadAdminMedia, uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
+import { uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
 import { slugify } from '@/lib/slugify'
 
 type CaseEditFormProps = {
@@ -49,47 +55,6 @@ type FormSnapshot = {
   gallery: GalleryFrame[]
 }
 
-type SlugCheck = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-
-let galleryIdSeq = 0
-function nextGalleryId() {
-  galleryIdSeq += 1
-  return `g-${Date.now()}-${galleryIdSeq}`
-}
-
-function kindFromFile(file: File): 'image' | 'video' {
-  if (file.type.startsWith('video/')) return 'video'
-  return 'image'
-}
-
-function kindFromSrc(src: string, mime?: string): 'image' | 'video' {
-  if (mime?.startsWith('video/')) return 'video'
-  if (/\.(mp4|webm|mov)(\?|$)/i.test(src)) return 'video'
-  return 'image'
-}
-
-function toFrames(items: CaseGalleryItem[]): GalleryFrame[] {
-  return items.map((g) => ({ ...g, id: nextGalleryId() }))
-}
-
-function initialGallery(item?: Case): GalleryFrame[] {
-  if (item?.gallery?.length) return toFrames(item.gallery)
-  if (item?.cover) {
-    return toFrames([
-      {
-        src: item.cover,
-        alt: item.coverAlt || item.title,
-        kind: kindFromSrc(item.cover),
-      },
-    ])
-  }
-  return []
-}
-
-function serializeGallery(frames: GalleryFrame[]): CaseGalleryItem[] {
-  return frames.map(({ src, alt, kind }) => ({ src, alt, kind }))
-}
-
 function snapshotFrom(item: Case | undefined): FormSnapshot {
   return {
     title: item?.title ?? '',
@@ -102,16 +67,13 @@ function snapshotFrom(item: Case | undefined): FormSnapshot {
     seoDescription: item?.seo?.description ?? '',
     status: item?.status ?? 'draft',
     featured: item?.featured ?? false,
-    gallery: initialGallery(item),
+    gallery: initialCoverGallery({
+      gallery: item?.gallery,
+      cover: item?.cover,
+      coverAlt: item?.coverAlt,
+      title: item?.title,
+    }),
   }
-}
-
-function snapshotsEqual(a: FormSnapshot, b: FormSnapshot) {
-  const strip = (s: FormSnapshot) => ({
-    ...s,
-    gallery: serializeGallery(s.gallery),
-  })
-  return JSON.stringify(strip(a)) === JSON.stringify(strip(b))
 }
 
 function applySnapshot(
@@ -160,7 +122,6 @@ export function CaseEditForm({
   const [title, setTitle] = useState(baselineRef.current.title)
   const [slug, setSlug] = useState(baselineRef.current.slug)
   const [slugTouched, setSlugTouched] = useState(!isNew)
-  const [slugCheck, setSlugCheck] = useState<SlugCheck>('idle')
   const [year, setYear] = useState(baselineRef.current.year)
   const [summary, setSummary] = useState(baselineRef.current.summary)
   const [heroTitle, setHeroTitle] = useState(baselineRef.current.heroTitle)
@@ -172,13 +133,31 @@ export function CaseEditForm({
   const [gallery, setGallery] = useState<GalleryFrame[]>(() =>
     baselineRef.current.gallery.map((g) => ({ ...g })),
   )
-  const [uploadBusy, setUploadBusy] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [fileDropActive, setFileDropActive] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const slugCheckSeq = useRef(0)
+
+  const {
+    uploadBusy,
+    uploadProgress,
+    uploadError,
+    setUploadError,
+    fileDropActive,
+    fileInputRef,
+    handleGalleryFiles,
+    onGalleryFileDragOver,
+    onGalleryFileDragLeave,
+    onGalleryFileDrop,
+  } = useGalleryUpload({
+    setGallery,
+    altFallback: title,
+    onClearFormError: () => setFormError(null),
+  })
+
+  const { slugCheck, slugHint, resetSlugCheck } = useSlugAvailability({
+    slug,
+    slugTouched,
+    excludeSlug,
+    check: checkCaseSlugAction,
+  })
 
   useEffect(() => {
     const next = snapshotFrom(item)
@@ -197,13 +176,13 @@ export function CaseEditForm({
       setGallery,
     })
     setSlugTouched(!isNew)
-    setSlugCheck('idle')
+    resetSlugCheck()
     setFormError(null)
     setUploadError(null)
     setShowDelete(false)
     // itemKey / saved: soft-nav between cases or post-save refresh without remount
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on identity, not every item reference
-  }, [itemKey, isNew, saved])
+  }, [itemKey, isNew, saved, resetSlugCheck, setUploadError])
 
   const pageTitle = title.trim() || (isNew ? 'Новый кейс' : 'Кейс')
   const cover = gallery[0]
@@ -237,47 +216,14 @@ export function CaseEditForm({
     ],
   )
 
-  const dirty = !snapshotsEqual(currentSnapshot, baselineRef.current)
-  const { isNavigatingAway, allowLeave, blockLeave, navigateAway } = useCaseFormDirty(dirty)
+  const dirty = !snapshotsEqualWithGallery(currentSnapshot, baselineRef.current)
+  const { isNavigatingAway, allowLeave, blockLeave, navigateAway } = useAdminFormDirty(dirty)
 
   const statusLabel = useMemo(() => {
     if (status === 'published') return 'Опубликовано'
     if (status === 'hidden') return 'Скрыто'
     return 'Черновик'
   }, [status])
-
-  const runSlugCheck = useCallback(
-    async (value: string) => {
-      const normalized = slugify(value)
-      if (!normalized) {
-        setSlugCheck('invalid')
-        return
-      }
-
-      const seq = ++slugCheckSeq.current
-      setSlugCheck('checking')
-      const result = await checkCaseSlugAction(normalized, excludeSlug)
-      if (seq !== slugCheckSeq.current) return
-
-      if (!result.slug) {
-        setSlugCheck('invalid')
-        return
-      }
-      setSlugCheck(result.available ? 'available' : 'taken')
-    },
-    [excludeSlug],
-  )
-
-  useEffect(() => {
-    if (!slugTouched && !slug) {
-      setSlugCheck('idle')
-      return
-    }
-    const handle = window.setTimeout(() => {
-      void runSlugCheck(slug)
-    }, 320)
-    return () => window.clearTimeout(handle)
-  }, [slug, slugTouched, runSlugCheck])
 
   const onTitleChange = useCallback(
     (value: string) => {
@@ -291,66 +237,6 @@ export function CaseEditForm({
     setSlugTouched(true)
     setSlug(slugify(value))
   }, [])
-
-  async function handleGalleryFiles(files: FileList | null) {
-    if (!files?.length) return
-    const list = Array.from(files)
-    setUploadError(null)
-    setFormError(null)
-    setUploadBusy(true)
-    setUploadProgress({ done: 0, total: list.length })
-
-    const results = await Promise.allSettled(
-      list.map(async (file) => {
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-          throw new Error(`Неподдерживаемый файл: ${file.name}`)
-        }
-        const uploaded = await uploadAdminMedia(file, title || file.name)
-        setUploadProgress((prev) =>
-          prev ? { ...prev, done: Math.min(prev.total, prev.done + 1) } : prev,
-        )
-        return {
-          id: nextGalleryId(),
-          src: uploaded.url,
-          alt: uploaded.alt || title || file.name,
-          kind: kindFromFile(file),
-        } satisfies GalleryFrame
-      }),
-    )
-
-    const next: GalleryFrame[] = []
-    const errors: string[] = []
-    for (const result of results) {
-      if (result.status === 'fulfilled') next.push(result.value)
-      else errors.push(result.reason instanceof Error ? result.reason.message : 'Ошибка загрузки')
-    }
-
-    if (next.length) setGallery((prev) => [...prev, ...next])
-    if (errors.length) setUploadError(errors[0] ?? 'Ошибка загрузки')
-
-    setUploadBusy(false)
-    setUploadProgress(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  function onGalleryFileDragOver(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if ([...e.dataTransfer.types].includes('Files')) setFileDropActive(true)
-  }
-
-  function onGalleryFileDragLeave(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setFileDropActive(false)
-  }
-
-  function onGalleryFileDrop(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setFileDropActive(false)
-    void handleGalleryFiles(e.dataTransfer.files)
-  }
 
   function validateBeforeSubmit(e: FormEvent<HTMLFormElement>) {
     const normalizedSlug = slugify(slug)
@@ -381,26 +267,17 @@ export function CaseEditForm({
   }
 
   const publicSlug = slugify(slug)
-  const previewHref = !publicSlug || isNew
+  // Preview token is signed for the saved slug — use that path until re-save.
+  const previewSlug = item?.slug || publicSlug
+  const previewHref = !previewSlug || isNew
     ? null
     : status === 'published'
-      ? `/works/${publicSlug}`
+      ? `/works/${previewSlug}`
       : previewToken
-        ? `/works/${publicSlug}?preview=${encodeURIComponent(previewToken)}`
+        ? `/works/${previewSlug}?preview=${encodeURIComponent(previewToken)}`
         : null
   const previewLabel = status === 'published' ? 'Открыть на сайте' : 'Превью на сайте'
   const galleryPayload = serializeGallery(gallery)
-
-  const slugHint =
-    slugCheck === 'checking'
-      ? 'Проверка…'
-      : slugCheck === 'taken'
-        ? 'Slug уже занят'
-        : slugCheck === 'invalid'
-          ? 'Slug пуст после нормализации'
-          : slugCheck === 'available'
-            ? 'Slug свободен'
-            : null
 
   return (
     <>
@@ -410,12 +287,12 @@ export function CaseEditForm({
         </button>
       </div>
 
-      <div className="case-edit-head">
+      <div className="admin-edit-head">
         <div>
           <h1 className="admin-title">{pageTitle}</h1>
-          <p className="admin-muted case-edit-head__meta">
+          <p className="admin-muted admin-edit-head__meta">
             {publicSlug ? `/works/${publicSlug}` : 'Укажите slug'} · {statusLabel}
-            {dirty ? <span className="case-edit-dirty"> · Не сохранено</span> : null}
+            {dirty ? <span className="admin-edit-dirty"> · Не сохранено</span> : null}
           </p>
         </div>
         {previewHref ? (
@@ -436,7 +313,7 @@ export function CaseEditForm({
       {uploadError ? <AdminFlash error={uploadError} /> : null}
 
       <form
-        className="admin-form admin-form--wide case-edit-form"
+        className="admin-form admin-form--wide admin-edit-form"
         action={saveCaseAction}
         onSubmit={validateBeforeSubmit}
       >
@@ -448,9 +325,9 @@ export function CaseEditForm({
         <input type="hidden" name="status" value={status} />
         {featured ? <input type="hidden" name="featured" value="on" /> : null}
 
-        <div className="case-edit-layout">
-          <div className="case-edit-main">
-            <section className="case-edit-section">
+        <div className="admin-edit-layout">
+          <div className="admin-edit-main">
+            <section className="admin-edit-section">
               <div className="admin-field">
                 <label className="admin-field-label" htmlFor="title">
                   Название
@@ -550,7 +427,7 @@ export function CaseEditForm({
               onChange={(e) => void handleGalleryFiles(e.target.files)}
             />
 
-            <CaseGalleryEditor
+            <AdminGalleryEditor
               frames={gallery}
               onChange={(next) => {
                 setGallery(next)
@@ -565,9 +442,9 @@ export function CaseEditForm({
               onFileDrop={onGalleryFileDrop}
             />
 
-            <section className="case-edit-section">
-              <div className="case-edit-section__head">
-                <h2 className="case-edit-section__title">Описание</h2>
+            <section className="admin-edit-section">
+              <div className="admin-edit-section__head">
+                <h2 className="admin-edit-section__title">Описание</h2>
                 <p className="admin-muted">Основной текст страницы кейса</p>
               </div>
               <RichBlock
@@ -580,7 +457,7 @@ export function CaseEditForm({
               />
             </section>
 
-            <CaseSeoFields
+            <AdminSeoFields
               title={title}
               summary={summary}
               seoTitle={seoTitle}
@@ -590,7 +467,7 @@ export function CaseEditForm({
             />
           </div>
 
-          <CasePublishAside
+          <AdminPublishAside
             status={status}
             featured={featured}
             dirty={dirty}

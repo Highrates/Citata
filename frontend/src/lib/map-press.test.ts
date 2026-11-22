@@ -24,5 +24,9 @@ test('round-trip: fixture → payload → fixture', () => {
     createdAt: '',
   } as PayloadPressMention)
 
-  assert.deepEqual(restored, fixture)
+  assert.equal(restored.id, 1)
+  assert.equal(restored.title, fixture.title)
+  assert.equal(restored.source, fixture.source)
+  assert.equal(restored.url, fixture.url)
+  assert.equal(restored.sortOrder, fixture.sortOrder)
 })

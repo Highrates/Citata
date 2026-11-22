@@ -4,9 +4,9 @@ import { useLayoutEffect, useRef } from 'react'
 import Link from 'next/link'
 import gsap from 'gsap'
 import { CitataLogoWave } from '@/components/home/CitataLogoWave'
-import { HomeCasesGrid } from '@/components/home/HomeCasesGrid'
+import { HomeCasesGrid, type MediaGridItem } from '@/components/home/HomeCasesGrid'
 import { HomeScrollHeader } from '@/components/home/HomeScrollHeader'
-import type { Case } from '@/content/types'
+import { waitForPreloaderReveal } from '@/lib/preloader-events'
 
 const services = [
   'Пиар',
@@ -28,7 +28,7 @@ const navItems = [
 type HomeHeroProps = {
   email: string
   telegramUrl: string
-  cases: Pick<Case, 'slug' | 'title' | 'cover' | 'coverAlt' | 'year' | 'summary'>[]
+  cases: MediaGridItem[]
 }
 
 export function HomeHero({ email, telegramUrl, cases }: HomeHeroProps) {
@@ -38,62 +38,98 @@ export function HomeHero({ email, telegramUrl, cases }: HomeHeroProps) {
     if (!rootRef.current) return
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const isMobile = window.matchMedia('(max-width: 960px)').matches
     const brand = rootRef.current.querySelector<HTMLElement>('.home-hero__brand')
     const menu = rootRef.current.querySelector<HTMLElement>('.home-hero__menu')
     const letters = rootRef.current.querySelectorAll<HTMLElement>('.logo-wave__letter')
-    if (!brand || !menu) return
+    const cols = rootRef.current.querySelectorAll<HTMLElement>('.home-hero__col')
+    const grid = rootRef.current.querySelector<HTMLElement>('.home-cases-grid')
+    if (!menu) return
 
-    const brandHeight = brand.scrollHeight
-    const dist = Math.ceil(brandHeight * 1.4) || 120
-
+    let cancelled = false
     const ctx = gsap.context(() => {
-      if (prefersReducedMotion) {
-        gsap.set(brand, { height: 'auto', overflow: 'visible' })
+      const showInstant = () => {
+        if (brand) gsap.set(brand, { height: 'auto', overflow: 'visible' })
         gsap.set(letters, { y: 0 })
-        gsap.set('.home-hero__col', { opacity: 1, y: 0 })
-        gsap.set('.home-cases-grid', { opacity: 1, y: 0 })
+        gsap.set(cols, { opacity: 1, y: 0 })
+        if (grid) gsap.set(grid, { opacity: 1, y: 0 })
+      }
+
+      if (prefersReducedMotion) {
+        showInstant()
         return
       }
 
-      gsap.set(brand, { height: 0, overflow: 'hidden' })
-      gsap.set(letters, { y: -dist })
-      gsap.set('.home-hero__col', { opacity: 0, y: 12 })
-      gsap.set('.home-cases-grid', { opacity: 0, y: 24 })
+      // Hold content hidden until preloader curtains close & reveal
+      gsap.set(cols, { opacity: 0, y: isMobile ? 18 : 12 })
+      if (grid) gsap.set(grid, { opacity: 0, y: isMobile ? 36 : 24 })
 
-      const tl = gsap.timeline({
-        defaults: { ease: 'power2.out' },
-        onComplete: () => {
-          gsap.set(brand, { height: 'auto', overflow: 'visible' })
-        },
-      })
+      const playIntro = () => {
+        if (cancelled || !rootRef.current) return
 
-      tl.to(
-        brand,
-        {
-          height: brandHeight,
-          duration: 0.9,
-          ease: 'power3.out',
-        },
-        0,
-      )
-        .to(
-          letters,
-          {
-            y: 0,
-            duration: 0.7,
-            stagger: 0.045,
-          },
-          0.06,
-        )
-        .to(
-          '.home-hero__col',
-          { opacity: 1, y: 0, duration: 0.45, stagger: 0.05 },
-          '-=0.35',
-        )
-        .to('.home-cases-grid', { opacity: 1, y: 0, duration: 0.6 }, '-=0.2')
+        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } })
+
+        if (brand && !isMobile) {
+          const brandHeight = brand.scrollHeight
+          const dist = Math.ceil(brandHeight * 1.4) || 120
+          gsap.set(brand, { height: 0, overflow: 'hidden' })
+          gsap.set(letters, { y: -dist })
+
+          tl.to(
+            brand,
+            {
+              height: brandHeight,
+              duration: 0.9,
+              ease: 'power3.out',
+              onComplete: () => {
+                gsap.set(brand, { height: 'auto', overflow: 'visible' })
+              },
+            },
+            0,
+          ).to(
+            letters,
+            {
+              y: 0,
+              duration: 0.7,
+              stagger: 0.045,
+            },
+            0.06,
+          )
+        }
+
+        if (isMobile) {
+          // After curtains: soft rise of meta, then grid
+          tl.to(
+            cols,
+            { opacity: 1, y: 0, duration: 0.55, stagger: 0.07, ease: 'power3.out' },
+            0.05,
+          )
+          if (grid) {
+            tl.to(
+              grid,
+              { opacity: 1, y: 0, duration: 0.75, ease: 'power3.out' },
+              '-=0.28',
+            )
+          }
+        } else {
+          tl.to(
+            cols,
+            { opacity: 1, y: 0, duration: 0.45, stagger: 0.05 },
+            '-=0.35',
+          )
+          if (grid) {
+            tl.to(grid, { opacity: 1, y: 0, duration: 0.6 }, '-=0.2')
+          }
+        }
+      }
+
+      void waitForPreloaderReveal().then(playIntro)
     }, rootRef)
 
-    return () => ctx.revert()
+    return () => {
+      cancelled = true
+      ctx.revert()
+    }
   }, [])
 
   return (
@@ -108,9 +144,8 @@ export function HomeHero({ email, telegramUrl, cases }: HomeHeroProps) {
 
         <div className="home-hero__menu">
           <p className="home-hero__col home-hero__agency">
-            Агентство информационных
-            <br />
-            технологий & коммуникаций
+            <span className="home-hero__agency-line">Агентство информационных</span>
+            <span className="home-hero__agency-line">технологий &amp; коммуникаций</span>
           </p>
 
           <ul className="home-hero__col home-hero__services" aria-label="Услуги">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { ADMIN_SESSION_COOKIE } from '@/lib/admin/session'
+import { hasValidAdminSessionCookie } from '@/lib/admin/session'
+import { validateAdminUploadFile } from '@/lib/admin/upload-limits'
+import { unwrapPayloadDoc } from '@/lib/api/unwrap-payload-doc'
 
 export const runtime = 'nodejs'
 
@@ -9,8 +10,7 @@ function apiBase() {
 }
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  if (!cookieStore.get(ADMIN_SESSION_COOKIE)?.value) {
+  if (!(await hasValidAdminSessionCookie())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -23,6 +23,11 @@ export async function POST(request: Request) {
   const file = incoming.get('file')
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'Файл не передан' }, { status: 400 })
+  }
+
+  const validationError = validateAdminUploadFile(file)
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 })
   }
 
   const altRaw = incoming.get('alt')
@@ -49,21 +54,28 @@ export async function POST(request: Request) {
     )
   }
 
-  let doc: {
-    doc?: { id?: number; url?: string | null; filename?: string | null; mimeType?: string | null; alt?: string }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    return NextResponse.json({ error: 'Некорректный ответ Payload' }, { status: 502 })
+  }
+
+  type MediaShape = {
     id?: number
     url?: string | null
     filename?: string | null
     mimeType?: string | null
     alt?: string
   }
+
+  let media: MediaShape
   try {
-    doc = JSON.parse(text)
+    media = unwrapPayloadDoc<MediaShape>(parsed as MediaShape | { doc: MediaShape })
   } catch {
-    return NextResponse.json({ error: 'Некорректный ответ Payload' }, { status: 502 })
+    return NextResponse.json({ error: 'Payload не вернул документ медиа' }, { status: 502 })
   }
 
-  const media = doc.doc ?? doc
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '')
   let url = media.url ?? ''
   if (url && url.startsWith('/')) url = `${siteUrl}${url}`

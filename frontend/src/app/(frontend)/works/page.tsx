@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { HomeCasesGrid } from '@/components/home/HomeCasesGrid'
+import { WorksPageContent } from '@/components/works/WorksPageContent'
 import { fetchCases } from '@/lib/content-cases'
 
 export const metadata: Metadata = {
@@ -10,21 +10,14 @@ export const metadata: Metadata = {
 export const revalidate = 300
 
 export default async function WorksPage() {
-  const cases = (await fetchCases()).map(({ slug, title, cover, coverAlt, year, summary }) => ({
+  const items = (await fetchCases()).map(({ slug, title, cover, coverAlt, summary }) => ({
     slug,
     title,
     cover,
     coverAlt,
-    year,
     summary,
+    href: `/works/${slug}`,
   }))
 
-  return (
-    <section className="works-page" aria-label="Работы">
-      <h1 className="sr-only">Работы</h1>
-      <div className="home-hero__cards">
-        <HomeCasesGrid cases={cases} />
-      </div>
-    </section>
-  )
+  return <WorksPageContent items={items} label="Работы" title="Работы" />
 }

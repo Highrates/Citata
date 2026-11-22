@@ -3,6 +3,7 @@ import type { PressMention as PayloadPressMention } from '@/payload-types'
 
 export function mapPayloadPressMentionToPressMention(doc: PayloadPressMention): PressMention {
   return {
+    id: doc.id,
     title: doc.title,
     source: doc.source,
     url: doc.url,

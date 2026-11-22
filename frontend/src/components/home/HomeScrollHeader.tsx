@@ -9,5 +9,5 @@ type HomeScrollHeaderProps = {
 
 /** Compact header: always on mobile; after hero scroll on desktop. */
 export function HomeScrollHeader({ email, telegramUrl }: HomeScrollHeaderProps) {
-  return <SiteBar mode="reveal" email={email} telegramUrl={telegramUrl} />
+  return <SiteBar mode="reveal" showCenterBrand email={email} telegramUrl={telegramUrl} />
 }

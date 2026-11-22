@@ -3,14 +3,19 @@
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useFormStatus } from 'react-dom'
 import { AdminFlash, AdminSourceBanner } from '@/components/admin/AdminFlash'
 import { AdminModal } from '@/components/admin/AdminModal'
-import { useCaseFormDirty } from '@/components/admin/useCaseFormDirty'
+import { AdminPendingSubmit } from '@/components/admin/AdminPendingSubmit'
+import { useAdminFormDirty } from '@/components/admin/useAdminFormDirty'
+import { useSlugAvailability } from '@/components/admin/useSlugAvailability'
 import { RichBlock } from '@/components/RichBlock/RichBlock'
 import type { Service } from '@/content/types'
 import type { AdminDataSource } from '@/lib/admin/data'
-import { deleteServiceAction, saveServiceAction } from '@/lib/admin/content-actions'
+import {
+  checkServiceSlugAction,
+  deleteServiceAction,
+  saveServiceAction,
+} from '@/lib/admin/content-actions'
 import { uploadAdminMedia, uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
 import { slugify } from '@/lib/slugify'
 
@@ -40,19 +45,11 @@ function snapshotFrom(item?: Service): Snapshot {
   }
 }
 
-function SaveButton({ disabled }: { disabled?: boolean }) {
-  const { pending } = useFormStatus()
-  return (
-    <button type="submit" className="admin-btn admin-btn--accent" disabled={disabled || pending}>
-      {pending ? 'Сохранение…' : 'Сохранить'}
-    </button>
-  )
-}
-
 export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEditFormProps) {
   const pathname = usePathname()
   const baselineRef = useRef(snapshotFrom(item))
   const itemKey = item?.slug ?? (isNew ? '__new__' : '')
+  const excludeSlug = item?.slug
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [title, setTitle] = useState(baselineRef.current.title)
@@ -66,6 +63,13 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
 
+  const { slugCheck, slugHint, resetSlugCheck } = useSlugAvailability({
+    slug,
+    slugTouched,
+    excludeSlug,
+    check: checkServiceSlugAction,
+  })
+
   useEffect(() => {
     const next = snapshotFrom(item)
     baselineRef.current = next
@@ -75,18 +79,19 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
     setImage(next.image)
     setCoverAlt(next.coverAlt)
     setSlugTouched(!isNew)
+    resetSlugCheck()
     setFormError(null)
     setUploadError(null)
     setShowDelete(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on identity / save
-  }, [itemKey, isNew, saved])
+  }, [itemKey, isNew, saved, resetSlugCheck])
 
   const current = useMemo(
     () => ({ title, slug, description, image, coverAlt }),
     [title, slug, description, image, coverAlt],
   )
   const dirty = JSON.stringify(current) !== JSON.stringify(baselineRef.current)
-  const { isNavigatingAway, allowLeave, blockLeave, navigateAway } = useCaseFormDirty(dirty)
+  const { isNavigatingAway, allowLeave, blockLeave, navigateAway } = useAdminFormDirty(dirty)
 
   const onTitleChange = useCallback(
     (value: string) => {
@@ -128,6 +133,14 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
       blockLeave()
       return
     }
+    if (slugCheck === 'taken' || slugCheck === 'invalid') {
+      e.preventDefault()
+      setFormError(
+        slugCheck === 'taken' ? 'Slug уже занят — выберите другой' : 'Некорректный slug',
+      )
+      blockLeave()
+      return
+    }
     setFormError(null)
     allowLeave()
   }
@@ -144,12 +157,12 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
         </button>
       </div>
 
-      <div className="case-edit-head">
+      <div className="admin-edit-head">
         <div>
           <h1 className="admin-title">{title.trim() || (isNew ? 'Новая услуга' : 'Услуга')}</h1>
-          <p className="admin-muted case-edit-head__meta">
+          <p className="admin-muted admin-edit-head__meta">
             {slug ? `/services · ${slug}` : 'Укажите slug'}
-            {dirty ? <span className="case-edit-dirty"> · Не сохранено</span> : null}
+            {dirty ? <span className="admin-edit-dirty"> · Не сохранено</span> : null}
           </p>
         </div>
       </div>
@@ -160,7 +173,7 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
       {uploadError ? <AdminFlash error={uploadError} /> : null}
 
       <form
-        className="admin-form admin-form--wide case-edit-form"
+        className="admin-form admin-form--wide admin-edit-form"
         action={saveServiceAction}
         onSubmit={validateBeforeSubmit}
       >
@@ -170,9 +183,9 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
         <input type="hidden" name="sortOrder" value={String(item?.sortOrder ?? 0)} />
         <input type="hidden" name="description" value={description} />
 
-        <div className="case-edit-layout">
-          <div className="case-edit-main">
-            <section className="case-edit-section">
+        <div className="admin-edit-layout">
+          <div className="admin-edit-main">
+            <section className="admin-edit-section">
               <div className="admin-field">
                 <label className="admin-field-label" htmlFor="title">
                   Название
@@ -201,13 +214,22 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
                     setSlug(slugify(e.target.value))
                   }}
                   required
+                  aria-describedby={slugHint ? 'service-slug-hint' : undefined}
                 />
+                {slugHint ? (
+                  <p
+                    id="service-slug-hint"
+                    className={`admin-field-hint${slugCheck === 'taken' || slugCheck === 'invalid' ? ' admin-field-hint--error' : ''}`}
+                  >
+                    {slugHint}
+                  </p>
+                ) : null}
               </div>
             </section>
 
-            <section className="case-edit-section">
-              <div className="case-edit-section__head">
-                <h2 className="case-edit-section__title">Описание</h2>
+            <section className="admin-edit-section">
+              <div className="admin-edit-section__head">
+                <h2 className="admin-edit-section__title">Описание</h2>
                 <p className="admin-muted">Текст услуги</p>
               </div>
               <RichBlock
@@ -220,9 +242,9 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
               />
             </section>
 
-            <section className="case-edit-section">
-              <div className="case-edit-section__head">
-                <h2 className="case-edit-section__title">Обложка</h2>
+            <section className="admin-edit-section">
+              <div className="admin-edit-section__head">
+                <h2 className="admin-edit-section__title">Обложка</h2>
                 <p className="admin-muted">Превью при наведении на /services</p>
               </div>
 
@@ -236,13 +258,19 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
 
               {image ? (
                 <div className="service-cover-preview">
-                  <Image src={image} alt={coverAlt || ''} width={320} height={420} className="service-cover-preview__img" />
+                  <Image
+                    src={image}
+                    alt={coverAlt || ''}
+                    width={320}
+                    height={420}
+                    className="service-cover-preview__img"
+                  />
                 </div>
               ) : (
                 <p className="admin-muted">Обложка ещё не загружена</p>
               )}
 
-              <div className="admin-form-actions" style={{ marginTop: 16 }}>
+              <div className="admin-form-actions service-cover-actions">
                 <button
                   type="button"
                   className="admin-btn admin-btn--outline"
@@ -262,7 +290,7 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
                 ) : null}
               </div>
 
-              <div className="admin-field" style={{ marginTop: 16 }}>
+              <div className="admin-field service-cover-alt">
                 <label className="admin-field-label" htmlFor="coverAlt">
                   Alt обложки
                 </label>
@@ -277,11 +305,19 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
             </section>
           </div>
 
-          <aside className="case-edit-aside">
-            <section className="case-edit-card">
-              <h2 className="case-edit-section__title">Публикация</h2>
-              <div className="admin-form-actions case-edit-aside__actions">
-                <SaveButton disabled={uploadBusy || isNavigatingAway || !image} />
+          <aside className="admin-edit-aside">
+            <section className="admin-edit-card">
+              <h2 className="admin-edit-section__title">Публикация</h2>
+              <div className="admin-form-actions admin-edit-aside__actions">
+                <AdminPendingSubmit
+                  disabled={
+                    uploadBusy ||
+                    isNavigatingAway ||
+                    !image ||
+                    slugCheck === 'taken' ||
+                    slugCheck === 'invalid'
+                  }
+                />
                 <button
                   type="button"
                   className="admin-btn admin-btn--outline"
@@ -291,9 +327,9 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
                 </button>
               </div>
               {!image ? (
-                <p className="case-edit-dirty-hint">Нужна обложка</p>
+                <p className="admin-edit-dirty-hint">Нужна обложка</p>
               ) : dirty ? (
-                <p className="case-edit-dirty-hint">Есть несохранённые изменения</p>
+                <p className="admin-edit-dirty-hint">Есть несохранённые изменения</p>
               ) : null}
               {!isNew ? (
                 <button
@@ -315,7 +351,11 @@ export function ServiceEditForm({ item, isNew, source, saved, error }: ServiceEd
         onClose={() => setShowDelete(false)}
         footer={
           <>
-            <button type="button" className="admin-btn admin-btn--outline" onClick={() => setShowDelete(false)}>
+            <button
+              type="button"
+              className="admin-btn admin-btn--outline"
+              onClick={() => setShowDelete(false)}
+            >
               Отмена
             </button>
             <form

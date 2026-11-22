@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useTransition } from 'react'
 
 /** Dirty leave guards: beforeunload + confirm for in-app navigation. */
-export function useCaseFormDirty(dirty: boolean) {
+export function useAdminFormDirty(dirty: boolean) {
   const router = useRouter()
   const allowLeaveRef = useRef(false)
   const [isNavigatingAway, startNavigate] = useTransition()

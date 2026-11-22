@@ -1,6 +1,6 @@
 'use client'
 
-type CaseSeoFieldsProps = {
+type AdminSeoFieldsProps = {
   title: string
   summary: string
   seoTitle: string
@@ -9,18 +9,18 @@ type CaseSeoFieldsProps = {
   onSeoDescriptionChange: (value: string) => void
 }
 
-export function CaseSeoFields({
+export function AdminSeoFields({
   title,
   summary,
   seoTitle,
   seoDescription,
   onSeoTitleChange,
   onSeoDescriptionChange,
-}: CaseSeoFieldsProps) {
+}: AdminSeoFieldsProps) {
   return (
-    <section className="case-edit-section">
-      <div className="case-edit-section__head">
-        <h2 className="case-edit-section__title">SEO</h2>
+    <section className="admin-edit-section">
+      <div className="admin-edit-section__head">
+        <h2 className="admin-edit-section__title">SEO</h2>
         <p className="admin-muted">Title и description для поисковиков и соцсетей</p>
       </div>
       <div className="admin-field">

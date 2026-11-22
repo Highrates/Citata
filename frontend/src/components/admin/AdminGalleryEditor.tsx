@@ -21,11 +21,11 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import Image from 'next/image'
 import { useMemo, useState, type DragEvent } from 'react'
-import type { CaseGalleryItem } from '@/content/types'
+import type { GalleryItem } from '@/content/types'
 
-export type GalleryFrame = CaseGalleryItem & { id: string }
+export type GalleryFrame = GalleryItem & { id: string }
 
-type CaseGalleryEditorProps = {
+type AdminGalleryEditorProps = {
   frames: GalleryFrame[]
   onChange: (frames: GalleryFrame[]) => void
   uploadBusy?: boolean
@@ -177,7 +177,7 @@ function FileDropZone({
   )
 }
 
-export function CaseGalleryEditor({
+export function AdminGalleryEditor({
   frames,
   onChange,
   uploadBusy,
@@ -190,7 +190,7 @@ export function CaseGalleryEditor({
   title = 'Галерея',
   coverBadge = 'Обложка',
   addLabel = 'Добавить фото / видео',
-}: CaseGalleryEditorProps) {
+}: AdminGalleryEditorProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -222,9 +222,9 @@ export function CaseGalleryEditor({
   }
 
   return (
-    <section className="case-edit-section">
-      <div className="case-edit-section__head case-edit-section__head--row">
-        <h2 className="case-edit-section__title">{title}</h2>
+    <section className="admin-edit-section">
+      <div className="admin-edit-section__head admin-edit-section__head--row">
+        <h2 className="admin-edit-section__title">{title}</h2>
         <button
           type="button"
           className="case-gallery-add"

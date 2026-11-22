@@ -6,14 +6,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import gsap from 'gsap'
 import { CitataBrandBlock } from '@/components/layout/CitataBrandBlock'
-import type { CaseGalleryItem, SiteSettings } from '@/content/types'
+import type { GalleryItem, SiteSettings } from '@/content/types'
 
 type AboutPageContentProps = {
   aboutText: string
   infoEmail: string
   telegramChannelUrl: string
   aboutStats: SiteSettings['aboutStats']
-  images: CaseGalleryItem[]
+  images: GalleryItem[]
 }
 
 const BURST_MS = 90
@@ -192,23 +192,24 @@ export function AboutPageContent({
 
   return (
     <section ref={rootRef} className="about-split" aria-labelledby="about-description-heading">
+      {/* Outside .about-description so GSAP transform doesn't trap absolute positioning */}
+      <Link href="/" className="about-split__back" aria-label="На главную" onClick={onBackClick}>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M19 12H5M11 6l-6 6 6 6"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </Link>
+
       <div className="about-description">
         <div className="about-description__main">
           <h1 id="about-description-heading" className="sr-only">
             О нас — ЦИТАТА
           </h1>
-
-          <Link href="/" className="about-split__back" aria-label="На главную" onClick={onBackClick}>
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M19 12H5M11 6l-6 6 6 6"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
 
           <p className="about-description__text">{aboutText}</p>
         </div>
@@ -253,17 +254,36 @@ export function AboutPageContent({
 
       <div className="about-split__media">
         <div className="about-split__image-stack" aria-hidden={frames.length > 1}>
-          {frames.map((frame, index) => (
-            <Image
-              key={`${frame.src}-${index}`}
-              src={frame.src}
-              alt={index === activeIndex ? frame.alt || 'ЦИТАТА — PR-агентство' : ''}
-              fill
-              priority={index === 0}
-              sizes="(max-width: 960px) 100vw, 50vw"
-              className={`about-split__image${index === activeIndex ? ' is-active' : ''}`}
-            />
-          ))}
+          {frames.map((frame, index) => {
+            const active = index === activeIndex
+            const className = `about-split__image${active ? ' is-active' : ''}`
+            if (frame.kind === 'video') {
+              return (
+                <video
+                  key={`${frame.src}-${index}`}
+                  src={frame.src}
+                  className={className}
+                  muted
+                  playsInline
+                  autoPlay
+                  loop
+                  preload={index === 0 ? 'auto' : 'metadata'}
+                  aria-label={active ? frame.alt || 'ЦИТАТА — PR-агентство' : undefined}
+                />
+              )
+            }
+            return (
+              <Image
+                key={`${frame.src}-${index}`}
+                src={frame.src}
+                alt={active ? frame.alt || 'ЦИТАТА — PR-агентство' : ''}
+                fill
+                priority={index === 0}
+                sizes="(max-width: 960px) 100vw, 50vw"
+                className={className}
+              />
+            )
+          })}
         </div>
         <span
           ref={curtainLeftRef}

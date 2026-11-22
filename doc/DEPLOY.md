@@ -63,6 +63,8 @@ server {
     server_name citata-pr.ru www.citata-pr.ru;
     client_max_body_size 50m;
 
+    # Admin media upload живёт на Next (/admin/api/…), не на Payload.
+    # Весь остальной /api/ → Payload CMS.
     location ^~ /api/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;

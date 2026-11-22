@@ -1,17 +1,25 @@
 import type { Metadata } from 'next'
-import { ArticlesPageContent } from '@/components/articles/ArticlesPageContent'
+import { WorksPageContent } from '@/components/works/WorksPageContent'
 import { fetchArticles } from '@/lib/content-articles'
-import { fetchPressMentions } from '@/lib/content-press'
 
 export const metadata: Metadata = {
-  title: 'Блог',
+  title: 'Новости',
   description: 'Статьи PR-агентства ЦИТАТА о стратегии, коммуникациях и медиа.',
 }
 
 export const revalidate = 300
 
 export default async function ArticlesPage() {
-  const [articles, press] = await Promise.all([fetchArticles(), fetchPressMentions()])
+  const items = (await fetchArticles())
+    .filter((item) => item.cover)
+    .map(({ slug, title, cover, coverAlt, excerpt }) => ({
+      slug,
+      title,
+      cover,
+      coverAlt: coverAlt || title,
+      summary: excerpt,
+      href: `/articles/${slug}`,
+    }))
 
-  return <ArticlesPageContent articles={articles} press={press} />
+  return <WorksPageContent items={items} label="Новости" title="Новости" />
 }

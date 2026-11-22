@@ -5,6 +5,8 @@ import { getArticles, getCaseBySlug, getCases } from '@/lib/content'
 import { getFixturePressMentions } from '@/lib/content-press'
 import { getFixtureServices } from '@/lib/content-services'
 import { hasPayloadApiKey, payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
+import { hasValidAdminSessionCookie } from '@/lib/admin/session'
+import { fetchAllPages } from '@/lib/admin/paginate'
 import { mapPayloadArticleToArticle } from '@/lib/map-article'
 import { mapPayloadCaseToCase } from '@/lib/map-case'
 import { mapPayloadPressMentionToPressMention } from '@/lib/map-press'
@@ -20,6 +22,12 @@ import type {
 
 export type AdminDataSource = 'payload' | 'fixtures'
 
+async function requireAdminDataAccess() {
+  if (!(await hasValidAdminSessionCookie())) {
+    throw new Error('Unauthorized')
+  }
+}
+
 async function tryPayload<T>(loader: () => Promise<T>): Promise<T | null> {
   if (!process.env.API_URL && !hasPayloadApiKey()) return null
   try {
@@ -29,35 +37,53 @@ async function tryPayload<T>(loader: () => Promise<T>): Promise<T | null> {
   }
 }
 
-const ADMIN_CASES_PAGE_SIZE = 100
-const ADMIN_CASES_MAX_PAGES = 50
-
 async function fetchAllPayloadCases(): Promise<Case[]> {
-  const items: Case[] = []
-  let page = 1
-
-  while (page <= ADMIN_CASES_MAX_PAGES) {
-    const result = await payloadGet<PayloadListResponse<PayloadCase>>(
+  const docs = await fetchAllPages<PayloadCase>((page, limit) =>
+    payloadGet<PayloadListResponse<PayloadCase>>(
       '/api/cases',
-      {
-        depth: 2,
-        limit: ADMIN_CASES_PAGE_SIZE,
-        page,
-        sort: 'sortOrder',
-      },
+      { depth: 2, limit, page, sort: 'sortOrder' },
       { auth: hasPayloadApiKey() },
-    )
-    items.push(...result.docs.map(mapPayloadCaseToCase))
-    if (!result.hasNextPage) break
-    page += 1
-  }
+    ),
+  )
+  return docs.map(mapPayloadCaseToCase)
+}
 
-  return items
+async function fetchAllPayloadArticles(): Promise<Article[]> {
+  const docs = await fetchAllPages<PayloadArticle>((page, limit) =>
+    payloadGet<PayloadListResponse<PayloadArticle>>(
+      '/api/articles',
+      { depth: 2, limit, page, sort: '-publishedAt' },
+      { auth: hasPayloadApiKey() },
+    ),
+  )
+  return docs.map(mapPayloadArticleToArticle)
+}
+
+async function fetchAllPayloadServices(): Promise<Service[]> {
+  const docs = await fetchAllPages<PayloadService>((page, limit) =>
+    payloadGet<PayloadListResponse<PayloadService>>(
+      '/api/services',
+      { depth: 1, limit, page, sort: 'sortOrder' },
+      { auth: hasPayloadApiKey() },
+    ),
+  )
+  return docs.map(mapPayloadServiceToService)
+}
+
+async function fetchAllPayloadPress(): Promise<PressMention[]> {
+  const docs = await fetchAllPages<PayloadPressMention>((page, limit) =>
+    payloadGet<PayloadListResponse<PayloadPressMention>>(
+      '/api/press-mentions',
+      { depth: 0, limit, page, sort: 'sortOrder' },
+      { auth: hasPayloadApiKey() },
+    ),
+  )
+  return docs.map(mapPayloadPressMentionToPressMention)
 }
 
 export async function fetchAdminCases(): Promise<{ items: Case[]; source: AdminDataSource }> {
+  await requireAdminDataAccess()
   const fromPayload = await tryPayload(fetchAllPayloadCases)
-
   if (fromPayload) return { items: fromPayload, source: 'payload' }
   return { items: getCases(), source: 'fixtures' }
 }
@@ -65,6 +91,7 @@ export async function fetchAdminCases(): Promise<{ items: Case[]; source: AdminD
 export async function fetchAdminCaseBySlug(
   slug: string,
 ): Promise<{ item: Case | undefined; source: AdminDataSource }> {
+  await requireAdminDataAccess()
   const fromPayload = await tryPayload(async () => {
     const result = await payloadGet<PayloadListResponse<PayloadCase>>(
       '/api/cases',
@@ -87,19 +114,8 @@ export async function fetchAdminCaseBySlug(
 }
 
 export async function fetchAdminArticles(): Promise<{ items: Article[]; source: AdminDataSource }> {
-  const fromPayload = await tryPayload(async () => {
-    const result = await payloadGet<PayloadListResponse<PayloadArticle>>(
-      '/api/articles',
-      {
-        depth: 2,
-        limit: 200,
-        sort: '-publishedAt',
-      },
-      { auth: hasPayloadApiKey() },
-    )
-    return result.docs.map(mapPayloadArticleToArticle)
-  })
-
+  await requireAdminDataAccess()
+  const fromPayload = await tryPayload(fetchAllPayloadArticles)
   if (fromPayload) return { items: fromPayload, source: 'payload' }
   return { items: getArticles(), source: 'fixtures' }
 }
@@ -107,6 +123,7 @@ export async function fetchAdminArticles(): Promise<{ items: Article[]; source: 
 export async function fetchAdminArticleBySlug(
   slug: string,
 ): Promise<{ item: Article | undefined; source: AdminDataSource }> {
+  await requireAdminDataAccess()
   const fromPayload = await tryPayload(async () => {
     const result = await payloadGet<PayloadListResponse<PayloadArticle>>(
       '/api/articles',
@@ -129,19 +146,8 @@ export async function fetchAdminArticleBySlug(
 }
 
 export async function fetchAdminServices(): Promise<{ items: Service[]; source: AdminDataSource }> {
-  const fromPayload = await tryPayload(async () => {
-    const result = await payloadGet<PayloadListResponse<PayloadService>>(
-      '/api/services',
-      {
-        depth: 1,
-        limit: 200,
-        sort: 'sortOrder',
-      },
-      { auth: hasPayloadApiKey() },
-    )
-    return result.docs.map(mapPayloadServiceToService)
-  })
-
+  await requireAdminDataAccess()
+  const fromPayload = await tryPayload(fetchAllPayloadServices)
   if (fromPayload) return { items: fromPayload, source: 'payload' }
   return { items: getFixtureServices(), source: 'fixtures' }
 }
@@ -149,6 +155,7 @@ export async function fetchAdminServices(): Promise<{ items: Service[]; source: 
 export async function fetchAdminServiceBySlug(
   slug: string,
 ): Promise<{ item: Service | undefined; source: AdminDataSource }> {
+  await requireAdminDataAccess()
   const fromPayload = await tryPayload(async () => {
     const result = await payloadGet<PayloadListResponse<PayloadService>>(
       '/api/services',
@@ -171,24 +178,17 @@ export async function fetchAdminServiceBySlug(
 }
 
 export async function fetchAdminPress(): Promise<{ items: PressMention[]; source: AdminDataSource }> {
-  const fromPayload = await tryPayload(async () => {
-    const result = await payloadGet<PayloadListResponse<PayloadPressMention>>(
-      '/api/press-mentions',
-      {
-        depth: 0,
-        limit: 100,
-        sort: 'sortOrder',
-      },
-      { auth: hasPayloadApiKey() },
-    )
-    return result.docs.map(mapPayloadPressMentionToPressMention)
-  })
-
+  await requireAdminDataAccess()
+  const fromPayload = await tryPayload(fetchAllPayloadPress)
   if (fromPayload) return { items: fromPayload, source: 'payload' }
   return { items: getFixturePressMentions(), source: 'fixtures' }
 }
 
-export async function fetchAdminSettings(): Promise<{ settings: SiteSettings; source: AdminDataSource }> {
+export async function fetchAdminSettings(): Promise<{
+  settings: SiteSettings
+  source: AdminDataSource
+}> {
+  await requireAdminDataAccess()
   const fromPayload = await tryPayload(async () => {
     const doc = await payloadGet<SiteSetting>(
       '/api/globals/site-settings',

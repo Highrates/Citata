@@ -7,9 +7,19 @@ export const metadata = { title: 'Вход' }
 
 type Props = { searchParams: Promise<{ error?: string; next?: string }> }
 
+function loginErrorMessage(code?: string) {
+  if (code === 'rate') return 'Слишком много попыток. Подождите несколько минут.'
+  if (code === 'config') return 'Сессия не настроена (ADMIN_SESSION_SECRET).'
+  if (code) return 'Неверный email или пароль.'
+  return null
+}
+
 export default async function AdminLoginPage({ searchParams }: Props) {
   const params = await searchParams
   const next = params.next ?? ADMIN_BASE
+  const errorMessage = loginErrorMessage(params.error)
+  const prefillEmail =
+    process.env.NODE_ENV !== 'production' ? process.env.ADMIN_EMAIL ?? '' : ''
 
   return (
     <div className="admin-login">
@@ -34,7 +44,7 @@ export default async function AdminLoginPage({ searchParams }: Props) {
 
         <h1 className="admin-login-title">Вход в админку</h1>
 
-        {params.error ? <p className="admin-error">Неверный email или пароль.</p> : null}
+        {errorMessage ? <p className="admin-error">{errorMessage}</p> : null}
 
         <form className="admin-form admin-login-form" action={loginAdminAction}>
           <input type="hidden" name="next" value={next} />
@@ -47,8 +57,8 @@ export default async function AdminLoginPage({ searchParams }: Props) {
               id="email"
               name="email"
               type="email"
-              placeholder="admin@citata-pr.ru"
-              defaultValue="admin@citata-pr.ru"
+              placeholder="email"
+              defaultValue={prefillEmail}
               autoComplete="username"
               required
             />

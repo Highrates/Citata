@@ -1,4 +1,5 @@
 import type { ArticleSection } from '@/content/types'
+import { ensureVideoAutoplay } from '@/lib/ensure-video-autoplay'
 
 type ArticleBodyProps = {
   sections?: ArticleSection[]
@@ -10,7 +11,7 @@ export function ArticleBody({ sections = [], description }: ArticleBodyProps) {
     return (
       <div
         className="article-body case-rich-html"
-        dangerouslySetInnerHTML={{ __html: description }}
+        dangerouslySetInnerHTML={{ __html: ensureVideoAutoplay(description) }}
       />
     )
   }

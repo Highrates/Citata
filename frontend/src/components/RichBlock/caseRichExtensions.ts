@@ -157,7 +157,14 @@ export const CaseVideo = Node.create({
     return [
       "video",
       mergeAttributes(
-        { class: "case-rich-media-video", controls: "true" },
+        {
+          class: "case-rich-media-video",
+          controls: "true",
+          autoplay: "true",
+          muted: "true",
+          loop: "true",
+          playsinline: "true",
+        },
         HTMLAttributes,
       ),
     ];

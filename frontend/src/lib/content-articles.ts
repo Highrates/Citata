@@ -3,6 +3,7 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { articles } from '@/content/articles'
 import type { Article } from '@/content/types'
+import { fetchAllPages } from '@/lib/admin/paginate'
 import { payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
 import { usesPayloadContent } from '@/lib/content-source'
 import { mapPayloadArticleToArticle } from '@/lib/map-article'
@@ -20,13 +21,16 @@ export function getFixtureArticles(): Article[] {
 
 const fetchPayloadArticles = unstable_cache(
   async (): Promise<Article[]> => {
-    const result = await payloadGet<PayloadListResponse<PayloadArticle>>('/api/articles', {
-      'where[status][equals]': 'published',
-      depth: 2,
-      limit: 200,
-      sort: '-publishedAt',
-    })
-    return sortArticles(result.docs.map(mapPayloadArticleToArticle))
+    const docs = await fetchAllPages<PayloadArticle>((page, limit) =>
+      payloadGet<PayloadListResponse<PayloadArticle>>('/api/articles', {
+        'where[status][equals]': 'published',
+        depth: 2,
+        limit,
+        page,
+        sort: '-publishedAt',
+      }),
+    )
+    return sortArticles(docs.map(mapPayloadArticleToArticle))
   },
   ['payload-articles'],
   { tags: ['articles'], revalidate: 300 },
@@ -39,7 +43,7 @@ export async function fetchArticles(): Promise<Article[]> {
 
 export async function fetchFeaturedArticles(): Promise<Article[]> {
   const all = await fetchArticles()
-  return all.filter((a) => a.featured).slice(0, 3)
+  return all.filter((a) => a.featured)
 }
 
 export async function fetchArticleBySlug(slug: string): Promise<Article | undefined> {

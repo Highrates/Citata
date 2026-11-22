@@ -1,4 +1,4 @@
-import type { CaseGalleryItem, Service, SiteSettings } from '@/content/types'
+import type { GalleryItem, Service, SiteSettings } from '@/content/types'
 import type { Media, SiteSetting } from '@/payload-types'
 import { siteSettings as fixtureSiteSettings } from '@/content/site'
 import { resolveMediaAlt, resolveMediaUrl } from '@/lib/media-url'
@@ -22,10 +22,10 @@ function mediaKind(media: number | Media | null | undefined): 'image' | 'video' 
   return 'image'
 }
 
-function mapAboutGallery(doc: SiteSetting): CaseGalleryItem[] {
+function mapAboutGallery(doc: SiteSetting): GalleryItem[] {
   if (doc.aboutGallery == null) return fixtureSiteSettings.aboutGallery
 
-  const items: CaseGalleryItem[] = []
+  const items: GalleryItem[] = []
   for (const row of doc.aboutGallery) {
     const src = resolveMediaUrl(row.media)
     if (!src) continue

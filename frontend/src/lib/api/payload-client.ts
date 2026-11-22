@@ -1,5 +1,13 @@
 import 'server-only'
 
+export {
+  unwrapPayloadDoc,
+  type PayloadMutationResponse,
+} from '@/lib/api/unwrap-payload-doc'
+export type { PayloadListResponse } from '@/lib/api/payload-client-types'
+import { unwrapPayloadDoc, type PayloadMutationResponse } from '@/lib/api/unwrap-payload-doc'
+import type { PayloadListResponse } from '@/lib/api/payload-client-types'
+
 type QueryValue = string | number | boolean | undefined | null
 
 function getApiBase() {
@@ -57,6 +65,7 @@ export async function payloadMutate<T>(
   method: 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
+  options?: { unwrapDoc?: boolean },
 ): Promise<T> {
   if (!hasPayloadApiKey()) {
     throw new Error('PAYLOAD_API_KEY не задан — запись в backend недоступна')
@@ -78,11 +87,7 @@ export async function payloadMutate<T>(
   }
 
   if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
-}
-
-export type PayloadListResponse<T> = {
-  docs: T[]
-  totalDocs: number
-  hasNextPage: boolean
+  const json = (await res.json()) as PayloadMutationResponse<T>
+  const shouldUnwrap = options?.unwrapDoc !== false && (method === 'POST' || method === 'PATCH')
+  return shouldUnwrap ? unwrapPayloadDoc(json) : (json as T)
 }

@@ -4,13 +4,14 @@ import { usePathname } from 'next/navigation'
 import { Footer } from '@/components/layout/Footer'
 import { SiteBar } from '@/components/layout/SiteBar'
 import { SitePreloader } from '@/components/layout/SitePreloader'
-import type { SiteSettings } from '@/content/types'
+import type { GalleryItem, SiteSettings } from '@/content/types'
 
 type SiteChromeProps = {
   children: React.ReactNode
   telegramChannelUrl: string
   telegramBotUrl: string
   infoEmail?: string
+  aboutGallery?: GalleryItem[]
   legal: SiteSettings['legal']
 }
 
@@ -19,25 +20,34 @@ export function SiteChrome({
   telegramChannelUrl,
   telegramBotUrl,
   infoEmail,
+  aboutGallery,
   legal,
 }: SiteChromeProps) {
   const pathname = usePathname()
   const isHome = pathname === '/'
   const isAbout = pathname === '/about'
   const isServices = pathname === '/services'
-  const hideHeader = isHome || isAbout
+  const hideHeader = isHome
 
   return (
     <>
-      <SitePreloader telegramUrl={telegramChannelUrl} />
-      {!hideHeader ? (
+      <SitePreloader
+        telegramUrl={telegramChannelUrl}
+        email={infoEmail}
+        images={aboutGallery}
+      />
+      {isAbout ? (
         <SiteBar
-          mode="always"
+          mode="reveal"
+          revealTarget=".about-split__media"
+          revealOnMobile
           email={infoEmail}
           telegramUrl={telegramChannelUrl}
         />
+      ) : !hideHeader ? (
+        <SiteBar mode="always" email={infoEmail} telegramUrl={telegramChannelUrl} />
       ) : null}
-      <main className={hideHeader ? undefined : 'page-with-bar'}>{children}</main>
+      <main className={hideHeader || isAbout ? undefined : 'page-with-bar'}>{children}</main>
       {!isServices && !isAbout ? (
         <Footer
           telegramChannelUrl={telegramChannelUrl}

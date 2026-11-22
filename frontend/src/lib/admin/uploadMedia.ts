@@ -1,5 +1,7 @@
 'use client'
 
+import { validateAdminUploadFile } from '@/lib/admin/upload-limits'
+
 export type UploadedMedia = {
   id: number
   url: string
@@ -8,11 +10,17 @@ export type UploadedMedia = {
 }
 
 export async function uploadAdminMedia(file: File, alt?: string): Promise<UploadedMedia> {
+  const validationError = validateAdminUploadFile(file)
+  if (validationError) {
+    throw new Error(validationError)
+  }
+
   const fd = new FormData()
   fd.append('file', file)
   if (alt) fd.append('alt', alt)
 
-  const res = await fetch('/api/admin/media/upload', {
+  // Path under /admin/* so nginx (which proxies /api/ → Payload) reaches Next.
+  const res = await fetch('/admin/api/media/upload', {
     method: 'POST',
     body: fd,
     credentials: 'same-origin',

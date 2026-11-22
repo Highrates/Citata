@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import gsap from 'gsap'
+import { CitataLogoWave } from '@/components/home/CitataLogoWave'
 
 const MOBILE_MQ = '(max-width: 960px)'
 
@@ -11,6 +12,7 @@ const headerNavItems = [
   { href: '/works', label: 'КЕЙСЫ' },
   { href: '/services', label: 'УСЛУГИ' },
   { href: '/about', label: 'ЦИТАТА' },
+  { href: '/articles', label: 'НОВОСТИ' },
   { href: '/contacts', label: 'КОНТАКТЫ' },
 ] as const
 
@@ -22,9 +24,21 @@ const menuNavItems = [
   { href: '/contacts', label: 'Контакты' },
 ] as const
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+
 type SiteBarProps = {
-  /** reveal — появляется после ухода hero (главная, desktop); always — сразу виден */
+  /** reveal — появляется после ухода hero; always — сразу виден */
   mode?: 'reveal' | 'always'
+  /** Element that keeps the bar hidden while intersecting (reveal mode) */
+  revealTarget?: string
+  /**
+   * Home: false — bar always on mobile.
+   * About: true — bar reveals on mobile after hero leaves.
+   */
+  revealOnMobile?: boolean
+  /** Mobile home: show brand wordmark centered in the bar */
+  showCenterBrand?: boolean
   email?: string
   telegramUrl?: string
 }
@@ -32,17 +46,23 @@ type SiteBarProps = {
 /** Compact site header + Apostrophe-style full-screen burger menu. */
 export function SiteBar({
   mode = 'always',
+  revealTarget = '.home-hero__inner',
+  revealOnMobile = false,
+  showCenterBrand = false,
   email = 'info@citata-pr.ru',
   telegramUrl = 'https://t.me/citatapr',
 }: SiteBarProps) {
   const [visible, setVisible] = useState(mode === 'always')
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const linksRef = useRef<HTMLElement>(null)
+  const burgerRef = useRef<HTMLButtonElement>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const prefersReducedRef = useRef(false)
   const mobileRef = useRef(false)
+  const prevOpenRef = useRef(false)
 
   useEffect(() => {
     prefersReducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -55,16 +75,16 @@ export function SiteBar({
     }
 
     const mq = window.matchMedia(MOBILE_MQ)
-    const hero = document.querySelector('.home-hero__inner')
+    const hero = document.querySelector(revealTarget)
 
     const sync = () => {
       mobileRef.current = mq.matches
-      if (mq.matches) {
+      if (mq.matches && !revealOnMobile) {
         setVisible(true)
         return
       }
       if (!hero) {
-        setVisible(true)
+        setVisible(mq.matches && revealOnMobile ? false : true)
         return
       }
       const rect = hero.getBoundingClientRect()
@@ -80,7 +100,7 @@ export function SiteBar({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (mobileRef.current) {
+        if (mobileRef.current && !revealOnMobile) {
           setVisible(true)
           return
         }
@@ -96,7 +116,7 @@ export function SiteBar({
       observer.disconnect()
       mq.removeEventListener('change', sync)
     }
-  }, [mode])
+  }, [mode, revealTarget, revealOnMobile])
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -106,13 +126,59 @@ export function SiteBar({
   }, [open])
 
   useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+    if (!open) {
+      if (prevOpenRef.current) {
+        burgerRef.current?.focus()
+      }
+      prevOpenRef.current = false
+      return
     }
+    prevOpenRef.current = true
+
+    const header = headerRef.current
+    const menu = menuRef.current
+    if (!header || !menu) return
+
+    const getFocusables = () => {
+      const nodes = [
+        burgerRef.current,
+        ...Array.from(menu.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)),
+      ].filter((el): el is HTMLElement => Boolean(el) && el.offsetParent !== null)
+      return nodes
+    }
+
+    const focusables = getFocusables()
+    const firstMenuLink = focusables.find((el) => el !== burgerRef.current)
+    ;(firstMenuLink ?? burgerRef.current)?.focus()
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setOpen(false)
+        return
+      }
+      if (e.key !== 'Tab') return
+
+      const list = getFocusables()
+      if (list.length === 0) return
+      const first = list[0]!
+      const last = list[list.length - 1]!
+      const active = document.activeElement as HTMLElement | null
+
+      if (e.shiftKey) {
+        if (active === first) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else if (active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, mounted])
 
   useLayoutEffect(() => {
     if (!mounted || !menuRef.current || !linksRef.current) return
@@ -200,10 +266,14 @@ export function SiteBar({
     setOpen(false)
   }
 
+  const interactive = visible || open || mounted
+
   return (
     <header
-      className={`home-bar${visible ? ' home-bar--visible' : ''}${open || mounted ? ' home-bar--menu-open' : ''}`}
-      aria-hidden={!visible}
+      ref={headerRef}
+      className={`home-bar${visible ? ' home-bar--visible' : ''}${open || mounted ? ' home-bar--menu-open' : ''}${showCenterBrand ? ' home-bar--home' : ''}`}
+      aria-hidden={!interactive}
+      inert={!interactive ? true : undefined}
     >
       <div className="home-bar__inner">
         <Link
@@ -211,24 +281,46 @@ export function SiteBar({
           className="home-bar__logo"
           aria-label="ЦИТАТА — на главную"
           onClick={closeMenu}
+          tabIndex={interactive ? undefined : -1}
         >
           <Image src="/images/logo-2.svg" alt="" width={26} height={38} priority />
         </Link>
 
         <nav className="home-bar__nav hide-mobile" aria-label="Навигация">
           {headerNavItems.map((item) => (
-            <Link key={item.href} href={item.href} className="home-bar__link" onClick={closeMenu}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className="home-bar__link"
+              onClick={closeMenu}
+              tabIndex={interactive ? undefined : -1}
+            >
               {item.label}
             </Link>
           ))}
         </nav>
 
+        {showCenterBrand ? (
+          <Link
+            href="/"
+            className="home-bar__brand"
+            aria-label="ЦИТАТА — на главную"
+            onClick={closeMenu}
+            tabIndex={interactive ? undefined : -1}
+          >
+            <span className="sr-only">ЦИТАТА</span>
+            <CitataLogoWave className="home-bar__brand-logo" />
+          </Link>
+        ) : null}
+
         <button
+          ref={burgerRef}
           type="button"
           className={`home-bar__burger${open ? ' home-bar__burger--open' : ''}`}
           aria-expanded={open}
           aria-controls="site-menu"
           aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
+          tabIndex={interactive ? undefined : -1}
           onClick={() => (open ? closeMenu() : openMenu())}
         >
           <span />
@@ -246,6 +338,7 @@ export function SiteBar({
                 href={item.href}
                 className="home-bar__menu-link"
                 onClick={closeMenu}
+                tabIndex={open ? undefined : -1}
               >
                 <span className="home-bar__menu-link-track">
                   <span className="home-bar__menu-link-static">{item.label}</span>
@@ -258,7 +351,12 @@ export function SiteBar({
           </nav>
 
           <div className="home-bar__menu-meta">
-            <a href={`mailto:${email}`} className="home-bar__menu-meta-link" onClick={closeMenu}>
+            <a
+              href={`mailto:${email}`}
+              className="home-bar__menu-meta-link"
+              onClick={closeMenu}
+              tabIndex={open ? undefined : -1}
+            >
               {email}
             </a>
             <a
@@ -267,6 +365,7 @@ export function SiteBar({
               target="_blank"
               rel="noreferrer"
               onClick={closeMenu}
+              tabIndex={open ? undefined : -1}
             >
               Telegram ↗
             </a>

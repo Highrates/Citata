@@ -3,6 +3,7 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { pressMentions } from '@/content/press'
 import type { PressMention } from '@/content/types'
+import { fetchAllPages } from '@/lib/admin/paginate'
 import { payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
 import { usesPayloadContent } from '@/lib/content-source'
 import { mapPayloadPressMentionToPressMention } from '@/lib/map-press'
@@ -18,15 +19,15 @@ export function getFixturePressMentions(): PressMention[] {
 
 const fetchPayloadPressMentions = unstable_cache(
   async (): Promise<PressMention[]> => {
-    const result = await payloadGet<PayloadListResponse<PayloadPressMention>>(
-      '/api/press-mentions',
-      {
+    const docs = await fetchAllPages<PayloadPressMention>((page, limit) =>
+      payloadGet<PayloadListResponse<PayloadPressMention>>('/api/press-mentions', {
         depth: 0,
-        limit: 100,
+        limit,
+        page,
         sort: 'sortOrder',
-      },
+      }),
     )
-    return sortPress(result.docs.map(mapPayloadPressMentionToPressMention))
+    return sortPress(docs.map(mapPayloadPressMentionToPressMention))
   },
   ['payload-press-mentions'],
   { tags: ['press-mentions'], revalidate: 300 },

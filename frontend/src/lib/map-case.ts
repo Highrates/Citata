@@ -1,4 +1,4 @@
-import type { Case, CaseGalleryItem, CaseStatus } from '@/content/types'
+import type { Case, GalleryItem, CaseStatus } from '@/content/types'
 import type { Case as PayloadCase, Media } from '@/payload-types'
 import { resolveMediaAlt, resolveMediaUrl } from '@/lib/media-url'
 
@@ -11,8 +11,8 @@ function mediaKind(media: number | Media | null | undefined): 'image' | 'video' 
   return 'image'
 }
 
-function mapGallery(doc: PayloadCase): CaseGalleryItem[] {
-  const items: CaseGalleryItem[] = []
+function mapGallery(doc: PayloadCase): GalleryItem[] {
+  const items: GalleryItem[] = []
   for (const row of doc.gallery ?? []) {
     const src = resolveMediaUrl(row.media)
     if (!src) continue

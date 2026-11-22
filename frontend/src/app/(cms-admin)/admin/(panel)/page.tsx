@@ -1,22 +1,28 @@
 import Link from 'next/link'
 import { adminPath } from '@/lib/admin/constants'
-import { getArticles, getCases } from '@/lib/content'
-import { fetchPressMentions } from '@/lib/content-press'
-import { fetchServices } from '@/lib/content-services'
+import {
+  fetchAdminArticles,
+  fetchAdminCases,
+  fetchAdminPress,
+  fetchAdminServices,
+} from '@/lib/admin/data'
 
 export const metadata = { title: 'Обзор' }
 
 export default async function AdminDashboardPage() {
-  const cases = getCases()
-  const articles = getArticles()
-  const [press, services] = await Promise.all([fetchPressMentions(), fetchServices()])
+  const [cases, articles, press, services] = await Promise.all([
+    fetchAdminCases(),
+    fetchAdminArticles(),
+    fetchAdminPress(),
+    fetchAdminServices(),
+  ])
 
   const cards = [
-    { href: adminPath('cases'), title: 'Кейсы', note: `${cases.length} работ` },
-    { href: adminPath('services'), title: 'Услуги', note: `${services.length} позиций` },
+    { href: adminPath('cases'), title: 'Кейсы', note: `${cases.items.length} работ` },
+    { href: adminPath('services'), title: 'Услуги', note: `${services.items.length} позиций` },
     { href: adminPath('about'), title: 'О нас', note: 'Текст и цифры /about' },
-    { href: adminPath('articles'), title: 'Статьи', note: `${articles.length} публикаций` },
-    { href: adminPath('press'), title: 'Пресса', note: `${press.length} ссылок` },
+    { href: adminPath('articles'), title: 'Статьи', note: `${articles.items.length} публикаций` },
+    { href: adminPath('press'), title: 'Пресса', note: `${press.items.length} ссылок` },
     { href: adminPath('settings'), title: 'Настройки', note: 'Контакты, Telegram, юр. инфо' },
   ]
 

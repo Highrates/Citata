@@ -1,8 +1,6 @@
 import { CaseEditForm } from '@/components/admin/CaseEditForm'
 import { flashFromSearchParams } from '@/lib/admin/flash'
 import { hasPayloadDatabase } from '@/lib/admin/payload-helpers'
-import { casePreviewQueryValue } from '@/lib/preview'
-
 export const metadata = { title: 'Новый кейс' }
 
 export default async function CmsCaseNewPage({
@@ -17,7 +15,7 @@ export default async function CmsCaseNewPage({
     <CaseEditForm
       isNew
       source={source}
-      previewToken={casePreviewQueryValue()}
+      previewToken={null}
       {...flashFromSearchParams(sp)}
     />
   )

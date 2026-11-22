@@ -3,6 +3,7 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { allFixtureServices, servicesHeroImage } from '@/content/services'
 import type { Service } from '@/content/types'
+import { fetchAllPages } from '@/lib/admin/paginate'
 import { payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
 import { usesPayloadContent } from '@/lib/content-source'
 import { mapPayloadServiceToService } from '@/lib/map-service'
@@ -18,12 +19,15 @@ export function getFixtureServices(): Service[] {
 
 const fetchPayloadServices = unstable_cache(
   async (): Promise<Service[]> => {
-    const result = await payloadGet<PayloadListResponse<PayloadService>>('/api/services', {
-      depth: 1,
-      limit: 200,
-      sort: 'sortOrder',
-    })
-    return sortServices(result.docs.map(mapPayloadServiceToService))
+    const docs = await fetchAllPages<PayloadService>((page, limit) =>
+      payloadGet<PayloadListResponse<PayloadService>>('/api/services', {
+        depth: 1,
+        limit,
+        page,
+        sort: 'sortOrder',
+      }),
+    )
+    return sortServices(docs.map(mapPayloadServiceToService))
   },
   ['payload-services'],
   { tags: ['services'], revalidate: 300 },

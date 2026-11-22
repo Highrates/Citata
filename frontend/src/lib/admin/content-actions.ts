@@ -5,7 +5,7 @@ import { redirect, unstable_rethrow } from 'next/navigation'
 
 import type {
   ArticleStatus,
-  CaseGalleryItem,
+  GalleryItem,
   CaseStatus,
   PressMention,
 } from '@/content/types'
@@ -28,6 +28,7 @@ import {
   mapSiteSettingsToPayloadData,
   resolveAboutGalleryMediaIds,
 } from '@/lib/map-site'
+import { fetchAllPages } from '@/lib/admin/paginate'
 import { sortOrderFromIndex } from '@/lib/admin/sortable'
 import { slugify } from '@/lib/slugify'
 import type {
@@ -36,6 +37,22 @@ import type {
   Service as PayloadService,
   SiteSetting,
 } from '@/payload-types'
+import type { AdminPayloadClient } from '@/lib/admin/payload-helpers'
+
+async function findAllDocs<T>(
+  payload: AdminPayloadClient,
+  args: { collection: string; depth?: number; sort?: string },
+): Promise<T[]> {
+  return fetchAllPages((page, limit) =>
+    payload.find<T>({
+      collection: args.collection,
+      depth: args.depth,
+      sort: args.sort,
+      page,
+      limit,
+    }),
+  )
+}
 
 function requireDatabase(path: string) {
   if (!hasPayloadDatabase()) {
@@ -73,9 +90,9 @@ function parseJsonField<T>(raw: string, label: string): T {
   }
 }
 
-async function getNextCaseSortOrder(payload: Awaited<ReturnType<typeof getAdminPayload>>) {
-  const result = await payload.find<PayloadCase>({ collection: 'cases', limit: 200, depth: 0 })
-  const maxOrder = result.docs.reduce((max, doc) => Math.max(max, doc.sortOrder ?? 0), 0)
+async function getNextCaseSortOrder(payload: AdminPayloadClient) {
+  const docs = await findAllDocs<PayloadCase>(payload, { collection: 'cases', depth: 0 })
+  const maxOrder = docs.reduce((max, doc) => Math.max(max, doc.sortOrder ?? 0), 0)
   return maxOrder + 1
 }
 
@@ -95,21 +112,11 @@ export async function reorderCasesAction(formData: FormData) {
     const payload = await getAdminPayload()
     const slugs = parseJsonField<string[]>(formString(formData, 'orderJson'), 'порядок')
 
-    const pageSize = 100
-    const listedDocs: PayloadCase[] = []
-    let page = 1
-    while (page <= 50) {
-      const listed = await payload.find<PayloadCase>({
-        collection: 'cases',
-        limit: pageSize,
-        page,
-        depth: 0,
-        sort: 'sortOrder',
-      })
-      listedDocs.push(...listed.docs)
-      if (!listed.hasNextPage) break
-      page += 1
-    }
+    const listedDocs = await findAllDocs<PayloadCase>(payload, {
+      collection: 'cases',
+      depth: 0,
+      sort: 'sortOrder',
+    })
 
     const idBySlug = new Map(
       listedDocs
@@ -199,7 +206,7 @@ export async function saveCaseAction(formData: FormData) {
       redirectWithError(basePath, 'Заполните название и slug')
     }
 
-    const gallery = parseJsonField<CaseGalleryItem[]>(
+    const gallery = parseJsonField<GalleryItem[]>(
       formString(formData, 'galleryJson'),
       'галерея',
     )
@@ -376,7 +383,7 @@ export async function saveArticleAction(formData: FormData) {
       redirectWithError(basePath, 'Заполните обязательные поля')
     }
 
-    const gallery = parseJsonField<CaseGalleryItem[]>(
+    const gallery = parseJsonField<GalleryItem[]>(
       formString(formData, 'galleryJson'),
       'галерея',
     )
@@ -569,7 +576,7 @@ export async function saveAboutPageAction(formData: FormData) {
     const aboutText = formString(formData, 'aboutText')
     if (!aboutText) redirectWithError(path, 'Заполните описание')
 
-    const gallery = parseJsonField<CaseGalleryItem[]>(
+    const gallery = parseJsonField<GalleryItem[]>(
       formString(formData, 'galleryJson'),
       'галерея',
     )
@@ -616,13 +623,13 @@ export async function reorderServicesAction(formData: FormData) {
     const payload = await getAdminPayload()
     const slugs = parseJsonField<string[]>(formString(formData, 'orderJson'), 'порядок')
 
-    const listed = await payload.find<PayloadService>({
+    const listedDocs = await findAllDocs<PayloadService>(payload, {
       collection: 'services',
-      limit: 200,
       depth: 0,
+      sort: 'sortOrder',
     })
     const idBySlug = new Map(
-      listed.docs
+      listedDocs
         .filter((doc): doc is PayloadService & { slug: string } => Boolean(doc.slug))
         .map((doc) => [doc.slug, doc.id] as const),
     )
@@ -647,6 +654,41 @@ export async function reorderServicesAction(formData: FormData) {
     unstable_rethrow(error)
     const message = error instanceof Error ? error.message : 'Ошибка сохранения порядка'
     redirectWithError(path, message)
+  }
+}
+
+export async function checkServiceSlugAction(
+  slugRaw: string,
+  excludeSlug?: string,
+): Promise<{ available: boolean; slug: string; reason?: string }> {
+  const slug = slugify(slugRaw)
+  if (!slug) {
+    return { available: false, slug: '', reason: 'Пустой slug' }
+  }
+
+  if (!hasPayloadDatabase()) {
+    return { available: true, slug }
+  }
+
+  try {
+    const payload = await getAdminPayload()
+    const existingId = await findServiceIdBySlug(payload, slug)
+    if (!existingId) return { available: true, slug }
+
+    if (excludeSlug && excludeSlug === slug) {
+      return { available: true, slug }
+    }
+
+    if (excludeSlug) {
+      const currentId = await findServiceIdBySlug(payload, excludeSlug)
+      if (currentId && currentId === existingId) {
+        return { available: true, slug }
+      }
+    }
+
+    return { available: false, slug, reason: 'Уже занят' }
+  } catch {
+    return { available: false, slug, reason: 'Не удалось проверить' }
   }
 }
 
@@ -679,8 +721,11 @@ export async function saveServiceAction(formData: FormData) {
 
     let sortOrder = formNumber(formData, 'sortOrder', 0)
     if (!existingId) {
-      const listed = await payload.find<PayloadService>({ collection: 'services', limit: 200, depth: 0 })
-      const maxOrder = listed.docs.reduce((max, doc) => Math.max(max, doc.sortOrder ?? 0), 0)
+      const listedDocs = await findAllDocs<PayloadService>(payload, {
+        collection: 'services',
+        depth: 0,
+      })
+      const maxOrder = listedDocs.reduce((max, doc) => Math.max(max, doc.sortOrder ?? 0), 0)
       sortOrder = maxOrder + 1
     } else if (!sortOrder) {
       const doc = await payload.findByID<PayloadService>({ collection: 'services', id: existingId, depth: 0 })
@@ -743,23 +788,50 @@ export async function savePressMentionsAction(formData: FormData) {
     const payload = await getAdminPayload()
     const items = parseJsonField<PressMention[]>(formString(formData, 'itemsJson'), 'публикации')
 
-    const existing = await payload.find<PayloadPressMention>({
+    const existingDocs = await findAllDocs<PayloadPressMention>(payload, {
       collection: 'press-mentions',
-      limit: 200,
+      sort: 'sortOrder',
     })
 
-    for (const doc of existing.docs) {
-      await payload.delete({ collection: 'press-mentions', id: doc.id })
-    }
+    const existingById = new Map(existingDocs.map((doc) => [doc.id, doc]))
+    const existingByUrl = new Map(
+      existingDocs.map((doc) => [doc.url.trim().toLowerCase(), doc] as const),
+    )
+    const keptIds = new Set<number>()
 
     for (const [index, item] of items.entries()) {
-      await payload.create({
-        collection: 'press-mentions',
-        data: mapPressMentionToPayloadData({
-          ...item,
-          sortOrder: sortOrderFromIndex(index),
-        }),
+      const data = mapPressMentionToPayloadData({
+        ...item,
+        sortOrder: sortOrderFromIndex(index),
       })
+
+      const byId =
+        typeof item.id === 'number' && existingById.has(item.id)
+          ? existingById.get(item.id)
+          : undefined
+      const byUrl = existingByUrl.get(item.url.trim().toLowerCase())
+      const match = byId ?? byUrl
+
+      if (match) {
+        await payload.update({
+          collection: 'press-mentions',
+          id: match.id,
+          data,
+        })
+        keptIds.add(match.id)
+      } else {
+        const created = await payload.create<PayloadPressMention>({
+          collection: 'press-mentions',
+          data,
+        })
+        if (created?.id) keptIds.add(created.id)
+      }
+    }
+
+    for (const doc of existingDocs) {
+      if (!keptIds.has(doc.id)) {
+        await payload.delete({ collection: 'press-mentions', id: doc.id })
+      }
     }
 
     revalidatePath(path)

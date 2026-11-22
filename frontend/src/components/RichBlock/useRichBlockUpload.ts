@@ -81,7 +81,7 @@ export function useRichBlockUpload({
           );
         } else {
           onChangeRef.current(
-            `${value}<video class="case-rich-media-video" controls src="${src}"></video>`,
+            `${value}<video class="case-rich-media-video" controls autoplay muted loop playsinline src="${src}"></video>`,
           );
         }
         return;

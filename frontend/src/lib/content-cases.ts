@@ -3,6 +3,7 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { cases } from '@/content/cases'
 import type { Case } from '@/content/types'
+import { fetchAllPages } from '@/lib/admin/paginate'
 import { payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
 import { usesPayloadContent } from '@/lib/content-source'
 import { mapPayloadCaseToCase } from '@/lib/map-case'
@@ -18,13 +19,16 @@ export function getFixtureCases(): Case[] {
 
 const fetchPayloadCases = unstable_cache(
   async (): Promise<Case[]> => {
-    const result = await payloadGet<PayloadListResponse<PayloadCase>>('/api/cases', {
-      'where[status][equals]': 'published',
-      depth: 2,
-      limit: 200,
-      sort: 'sortOrder',
-    })
-    return sortCases(result.docs.map(mapPayloadCaseToCase))
+    const docs = await fetchAllPages<PayloadCase>((page, limit) =>
+      payloadGet<PayloadListResponse<PayloadCase>>('/api/cases', {
+        'where[status][equals]': 'published',
+        depth: 2,
+        limit,
+        page,
+        sort: 'sortOrder',
+      }),
+    )
+    return sortCases(docs.map(mapPayloadCaseToCase))
   },
   ['payload-cases'],
   { tags: ['cases'], revalidate: 300 },

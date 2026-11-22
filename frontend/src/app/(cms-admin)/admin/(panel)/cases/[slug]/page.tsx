@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { CaseEditForm } from '@/components/admin/CaseEditForm'
 import { fetchAdminCaseBySlug } from '@/lib/admin/data'
 import { flashFromSearchParams } from '@/lib/admin/flash'
-import { casePreviewQueryValue } from '@/lib/preview'
+import { createCasePreviewToken } from '@/lib/preview'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -27,7 +27,7 @@ export default async function CmsCaseEditPage({
       key={item.slug}
       item={item}
       source={source}
-      previewToken={casePreviewQueryValue()}
+      previewToken={await createCasePreviewToken(item.slug)}
       {...flashFromSearchParams(sp)}
     />
   )

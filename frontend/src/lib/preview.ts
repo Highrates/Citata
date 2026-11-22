@@ -1,23 +1,81 @@
-import 'server-only'
+import {
+  hmacSha256Base64Url,
+  verifyHmacSha256Base64Url,
+} from '@/lib/crypto/hmac'
 
-/** Authorize `/works/{slug}?preview=` — matches REVALIDATE_SECRET, or `1` in development. */
-export function isCasePreviewAuthorized(preview: string | string[] | undefined): boolean {
-  const value = Array.isArray(preview) ? preview[0] : preview
-  if (!value) return false
+/** Preview tokens last 12 hours — not the revalidate webhook secret. */
+const PREVIEW_TTL_SEC = 60 * 60 * 12
+const TOKEN_VERSION = 'p1'
 
-  const secret = process.env.REVALIDATE_SECRET
-  if (secret && value === secret) return true
+function getPreviewSecret(): string | null {
+  const dedicated = process.env.PREVIEW_SECRET?.trim()
+  if (dedicated && dedicated.length >= 16) return dedicated
 
-  if (process.env.NODE_ENV === 'development' && (value === '1' || value === 'true')) {
-    return true
+  // Dev fallback only — never reuse REVALIDATE_SECRET in production preview URLs.
+  if (process.env.NODE_ENV !== 'production') {
+    const session = process.env.ADMIN_SESSION_SECRET?.trim()
+    if (session && session.length >= 16) return `preview-dev:${session}`
+    const password = process.env.ADMIN_PASSWORD?.trim()
+    if (password) return `preview-dev:${password}`
   }
 
-  return false
+  return null
 }
 
-export function casePreviewQueryValue(): string | null {
-  const secret = process.env.REVALIDATE_SECRET
-  if (secret) return secret
-  if (process.env.NODE_ENV === 'development') return '1'
-  return null
+/**
+ * Short-lived signed preview token bound to a case slug.
+ * Format: p1.<exp>.<slugB64>.<sig>
+ */
+export async function createCasePreviewToken(slug: string): Promise<string | null> {
+  const secret = getPreviewSecret()
+  const normalized = slug.trim()
+  if (!secret || !normalized) return null
+
+  const exp = Math.floor(Date.now() / 1000) + PREVIEW_TTL_SEC
+  const slugPart = Buffer.from(normalized, 'utf8').toString('base64url')
+  const payload = `${TOKEN_VERSION}.${exp}.${slugPart}`
+  const sig = await hmacSha256Base64Url(secret, payload)
+  return `${payload}.${sig}`
+}
+
+export async function isCasePreviewAuthorized(
+  preview: string | string[] | undefined,
+  slug: string,
+): Promise<boolean> {
+  const value = Array.isArray(preview) ? preview[0] : preview
+  if (!value || !slug.trim()) return false
+
+  const secret = getPreviewSecret()
+  if (!secret) {
+    // Dev convenience: ?preview=1 only when no PREVIEW_SECRET configured
+    if (process.env.NODE_ENV !== 'production' && (value === '1' || value === 'true')) {
+      return true
+    }
+    return false
+  }
+
+  const parts = value.split('.')
+  if (parts.length !== 4) return false
+  const [version, expStr, slugPart, sig] = parts
+  if (version !== TOKEN_VERSION || !expStr || !slugPart || !sig) return false
+
+  const exp = Number(expStr)
+  if (!Number.isFinite(exp) || exp * 1000 < Date.now()) return false
+
+  let tokenSlug = ''
+  try {
+    tokenSlug = Buffer.from(slugPart, 'base64url').toString('utf8')
+  } catch {
+    return false
+  }
+
+  if (tokenSlug !== slug.trim()) return false
+
+  return verifyHmacSha256Base64Url(secret, `${version}.${expStr}.${slugPart}`, sig)
+}
+
+/** @deprecated use createCasePreviewToken(slug) */
+export async function casePreviewQueryValue(slug?: string): Promise<string | null> {
+  if (!slug) return null
+  return createCasePreviewToken(slug)
 }

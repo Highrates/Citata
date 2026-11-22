@@ -1,11 +1,11 @@
 'use client'
 
-import { useFormStatus } from 'react-dom'
+import { AdminPendingSubmit } from '@/components/admin/AdminPendingSubmit'
 import type { CaseStatus } from '@/content/types'
 
 type StatusOption = { value: CaseStatus; label: string }
 
-type CasePublishAsideProps = {
+type AdminPublishAsideProps = {
   status: CaseStatus
   featured: boolean
   dirty: boolean
@@ -15,6 +15,7 @@ type CasePublishAsideProps = {
   canPreview?: boolean
   statusOptions?: StatusOption[]
   deleteLabel?: string
+  featuredLabel?: string
   previewHint?: string
   onStatusChange: (status: CaseStatus) => void
   onFeaturedChange: (featured: boolean) => void
@@ -28,16 +29,7 @@ const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
   { value: 'hidden', label: 'Скрыто' },
 ]
 
-function SaveButton({ disabled }: { disabled?: boolean }) {
-  const { pending } = useFormStatus()
-  return (
-    <button type="submit" className="admin-btn admin-btn--accent" disabled={disabled || pending}>
-      {pending ? 'Сохранение…' : 'Сохранить'}
-    </button>
-  )
-}
-
-export function CasePublishAside({
+export function AdminPublishAside({
   status,
   featured,
   dirty,
@@ -47,12 +39,13 @@ export function CasePublishAside({
   canPreview,
   statusOptions = DEFAULT_STATUS_OPTIONS,
   deleteLabel = 'Удалить кейс',
+  featuredLabel = 'Отображать на главной',
   previewHint,
   onStatusChange,
   onFeaturedChange,
   onCancel,
   onDelete,
-}: CasePublishAsideProps) {
+}: AdminPublishAsideProps) {
   const unpublishedHint =
     previewHint ??
     (canPreview
@@ -60,9 +53,9 @@ export function CasePublishAside({
       : 'Сохраните материал, чтобы открыть превью на сайте')
 
   return (
-    <aside className="case-edit-aside">
-      <section className="case-edit-card">
-        <h2 className="case-edit-section__title">Публикация</h2>
+    <aside className="admin-edit-aside">
+      <section className="admin-edit-card">
+        <h2 className="admin-edit-section__title">Публикация</h2>
 
         <div className="admin-field">
           <label className="admin-field-label" htmlFor="statusSelect">
@@ -82,28 +75,28 @@ export function CasePublishAside({
           </select>
         </div>
 
-        <label className="case-edit-check">
+        <label className="admin-edit-check">
           <input
             type="checkbox"
             checked={featured}
             onChange={(e) => onFeaturedChange(e.target.checked)}
           />
-          <span>Отображать на главной</span>
+          <span>{featuredLabel}</span>
         </label>
 
         {status !== 'published' ? <p className="admin-muted">{unpublishedHint}</p> : null}
 
-        <div className="admin-form-actions case-edit-aside__actions">
-          <SaveButton disabled={saveDisabled || galleryEmpty} />
+        <div className="admin-form-actions admin-edit-aside__actions">
+          <AdminPendingSubmit disabled={saveDisabled || galleryEmpty} />
           <button type="button" className="admin-btn admin-btn--outline" onClick={onCancel}>
             Отмена
           </button>
         </div>
 
         {galleryEmpty ? (
-          <p className="case-edit-dirty-hint">Нужна хотя бы одна обложка в галерее</p>
+          <p className="admin-edit-dirty-hint">Нужна хотя бы одна обложка в галерее</p>
         ) : dirty ? (
-          <p className="case-edit-dirty-hint">Есть несохранённые изменения</p>
+          <p className="admin-edit-dirty-hint">Есть несохранённые изменения</p>
         ) : null}
 
         {showDelete ? (

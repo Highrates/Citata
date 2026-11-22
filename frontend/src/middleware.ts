@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 import { ADMIN_BASE } from '@/lib/admin/constants'
-import { ADMIN_SESSION_COOKIE } from '@/lib/admin/session'
+import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from '@/lib/admin/session-token'
 
 const PUBLIC_ADMIN_PATHS = [`${ADMIN_BASE}/login`]
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (pathname.startsWith('/cms')) {
@@ -27,8 +27,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const session = request.cookies.get(ADMIN_SESSION_COOKIE)
-  if (!session?.value) {
+  const raw = request.cookies.get(ADMIN_SESSION_COOKIE)?.value
+  const valid = await verifyAdminSessionToken(raw)
+  const isAdminApi =
+    pathname.startsWith(`${ADMIN_BASE}/api/`) || pathname.startsWith('/api/admin/')
+
+  if (!valid) {
+    if (isAdminApi) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = `${ADMIN_BASE}/login`
     loginUrl.searchParams.set('next', pathname)
@@ -39,5 +46,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/cms/:path*'],
+  matcher: ['/admin/:path*', '/cms/:path*', '/api/admin/:path*'],
 }

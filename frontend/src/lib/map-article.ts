@@ -1,4 +1,4 @@
-import type { Article, ArticleSection, ArticleStatus, CaseGalleryItem } from '@/content/types'
+import type { Article, ArticleSection, ArticleStatus, GalleryItem } from '@/content/types'
 import type { Article as PayloadArticle, Author, Media } from '@/payload-types'
 import { lexicalToSections } from '@/lib/lexical-utils'
 import { resolveMediaAlt, resolveMediaUrl } from '@/lib/media-url'
@@ -47,8 +47,8 @@ function mediaKind(media: number | Media | null | undefined): 'image' | 'video' 
   return 'image'
 }
 
-function mapGallery(doc: PayloadArticle): CaseGalleryItem[] {
-  const items: CaseGalleryItem[] = []
+function mapGallery(doc: PayloadArticle): GalleryItem[] {
+  const items: GalleryItem[] = []
   for (const row of doc.gallery ?? []) {
     const src = resolveMediaUrl(row.media)
     if (!src) continue

@@ -7,27 +7,33 @@ import {
   useMemo,
   useRef,
   useState,
-  type DragEvent,
   type FormEvent,
 } from 'react'
 import { AdminFlash, AdminSourceBanner } from '@/components/admin/AdminFlash'
 import { AdminModal } from '@/components/admin/AdminModal'
 import {
-  CaseGalleryEditor,
+  AdminGalleryEditor,
   type GalleryFrame,
-} from '@/components/admin/CaseGalleryEditor'
-import { CasePublishAside } from '@/components/admin/CasePublishAside'
-import { CaseSeoFields } from '@/components/admin/CaseSeoFields'
-import { useCaseFormDirty } from '@/components/admin/useCaseFormDirty'
+} from '@/components/admin/AdminGalleryEditor'
+import { AdminPublishAside } from '@/components/admin/AdminPublishAside'
+import { AdminSeoFields } from '@/components/admin/AdminSeoFields'
+import {
+  initialCoverGallery,
+  serializeGallery,
+  snapshotsEqualWithGallery,
+} from '@/components/admin/galleryHelpers'
+import { useAdminFormDirty } from '@/components/admin/useAdminFormDirty'
+import { useGalleryUpload } from '@/components/admin/useGalleryUpload'
+import { useSlugAvailability } from '@/components/admin/useSlugAvailability'
 import { RichBlock } from '@/components/RichBlock/RichBlock'
-import type { Article, ArticleStatus, CaseGalleryItem, CaseStatus } from '@/content/types'
+import type { Article, ArticleStatus, CaseStatus } from '@/content/types'
 import type { AdminDataSource } from '@/lib/admin/data'
 import {
   checkArticleSlugAction,
   deleteArticleAction,
   saveArticleAction,
 } from '@/lib/admin/content-actions'
-import { uploadAdminMedia, uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
+import { uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
 import { sectionsToHtml } from '@/lib/map-article'
 import { slugify } from '@/lib/slugify'
 
@@ -55,56 +61,15 @@ type FormSnapshot = {
   gallery: GalleryFrame[]
 }
 
-type SlugCheck = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-
 const ARTICLE_STATUS_OPTIONS: { value: CaseStatus; label: string }[] = [
   { value: 'draft', label: 'Черновик' },
   { value: 'published', label: 'Опубликовано' },
 ]
 
-let galleryIdSeq = 0
-function nextGalleryId() {
-  galleryIdSeq += 1
-  return `g-${Date.now()}-${galleryIdSeq}`
-}
-
-function kindFromFile(file: File): 'image' | 'video' {
-  if (file.type.startsWith('video/')) return 'video'
-  return 'image'
-}
-
-function kindFromSrc(src: string, mime?: string): 'image' | 'video' {
-  if (mime?.startsWith('video/')) return 'video'
-  if (/\.(mp4|webm|mov)(\?|$)/i.test(src)) return 'video'
-  return 'image'
-}
-
-function toFrames(items: CaseGalleryItem[]): GalleryFrame[] {
-  return items.map((g) => ({ ...g, id: nextGalleryId() }))
-}
-
-function initialGallery(item?: Article): GalleryFrame[] {
-  if (item?.gallery?.length) return toFrames(item.gallery)
-  if (item?.cover) {
-    return toFrames([
-      {
-        src: item.cover,
-        alt: item.coverAlt || item.title,
-        kind: kindFromSrc(item.cover),
-      },
-    ])
-  }
-  return []
-}
-
 function initialDescription(item?: Article): string {
   if (item?.description?.trim()) return item.description
   if (item?.sections?.length) return sectionsToHtml(item.sections)
   return ''
-}
-
-function serializeGallery(frames: GalleryFrame[]): CaseGalleryItem[] {
-  return frames.map(({ src, alt, kind }) => ({ src, alt, kind }))
 }
 
 function snapshotFrom(item: Article | undefined): FormSnapshot {
@@ -121,16 +86,13 @@ function snapshotFrom(item: Article | undefined): FormSnapshot {
     seoDescription: item?.seo?.description ?? '',
     status: item?.status ?? 'draft',
     featured: item?.featured ?? false,
-    gallery: initialGallery(item),
+    gallery: initialCoverGallery({
+      gallery: item?.gallery,
+      cover: item?.cover,
+      coverAlt: item?.coverAlt,
+      title: item?.title,
+    }),
   }
-}
-
-function snapshotsEqual(a: FormSnapshot, b: FormSnapshot) {
-  const strip = (s: FormSnapshot) => ({
-    ...s,
-    gallery: serializeGallery(s.gallery),
-  })
-  return JSON.stringify(strip(a)) === JSON.stringify(strip(b))
 }
 
 function applySnapshot(
@@ -182,7 +144,6 @@ export function ArticleEditForm({
   const [title, setTitle] = useState(baselineRef.current.title)
   const [slug, setSlug] = useState(baselineRef.current.slug)
   const [slugTouched, setSlugTouched] = useState(!isNew)
-  const [slugCheck, setSlugCheck] = useState<SlugCheck>('idle')
   const [excerpt, setExcerpt] = useState(baselineRef.current.excerpt)
   const [author, setAuthor] = useState(baselineRef.current.author)
   const [role, setRole] = useState(baselineRef.current.role)
@@ -196,13 +157,31 @@ export function ArticleEditForm({
   const [gallery, setGallery] = useState<GalleryFrame[]>(() =>
     baselineRef.current.gallery.map((g) => ({ ...g })),
   )
-  const [uploadBusy, setUploadBusy] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [fileDropActive, setFileDropActive] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const slugCheckSeq = useRef(0)
+
+  const {
+    uploadBusy,
+    uploadProgress,
+    uploadError,
+    setUploadError,
+    fileDropActive,
+    fileInputRef,
+    handleGalleryFiles,
+    onGalleryFileDragOver,
+    onGalleryFileDragLeave,
+    onGalleryFileDrop,
+  } = useGalleryUpload({
+    setGallery,
+    altFallback: title,
+    onClearFormError: () => setFormError(null),
+  })
+
+  const { slugCheck, slugHint, resetSlugCheck } = useSlugAvailability({
+    slug,
+    slugTouched,
+    excludeSlug,
+    check: checkArticleSlugAction,
+  })
 
   useEffect(() => {
     const next = snapshotFrom(item)
@@ -223,12 +202,12 @@ export function ArticleEditForm({
       setGallery,
     })
     setSlugTouched(!isNew)
-    setSlugCheck('idle')
+    resetSlugCheck()
     setFormError(null)
     setUploadError(null)
     setShowDelete(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on identity, not every item reference
-  }, [itemKey, isNew, saved])
+  }, [itemKey, isNew, saved, resetSlugCheck, setUploadError])
 
   const pageTitle = title.trim() || (isNew ? 'Новая статья' : 'Статья')
   const cover = gallery[0]
@@ -266,46 +245,13 @@ export function ArticleEditForm({
     ],
   )
 
-  const dirty = !snapshotsEqual(currentSnapshot, baselineRef.current)
-  const { isNavigatingAway, allowLeave, blockLeave, navigateAway } = useCaseFormDirty(dirty)
+  const dirty = !snapshotsEqualWithGallery(currentSnapshot, baselineRef.current)
+  const { isNavigatingAway, allowLeave, blockLeave, navigateAway } = useAdminFormDirty(dirty)
 
   const statusLabel = useMemo(() => {
     if (status === 'published') return 'Опубликовано'
     return 'Черновик'
   }, [status])
-
-  const runSlugCheck = useCallback(
-    async (value: string) => {
-      const normalized = slugify(value)
-      if (!normalized) {
-        setSlugCheck('invalid')
-        return
-      }
-
-      const seq = ++slugCheckSeq.current
-      setSlugCheck('checking')
-      const result = await checkArticleSlugAction(normalized, excludeSlug)
-      if (seq !== slugCheckSeq.current) return
-
-      if (!result.slug) {
-        setSlugCheck('invalid')
-        return
-      }
-      setSlugCheck(result.available ? 'available' : 'taken')
-    },
-    [excludeSlug],
-  )
-
-  useEffect(() => {
-    if (!slugTouched && !slug) {
-      setSlugCheck('idle')
-      return
-    }
-    const handle = window.setTimeout(() => {
-      void runSlugCheck(slug)
-    }, 320)
-    return () => window.clearTimeout(handle)
-  }, [slug, slugTouched, runSlugCheck])
 
   const onTitleChange = useCallback(
     (value: string) => {
@@ -319,66 +265,6 @@ export function ArticleEditForm({
     setSlugTouched(true)
     setSlug(slugify(value))
   }, [])
-
-  async function handleGalleryFiles(files: FileList | null) {
-    if (!files?.length) return
-    const list = Array.from(files)
-    setUploadError(null)
-    setFormError(null)
-    setUploadBusy(true)
-    setUploadProgress({ done: 0, total: list.length })
-
-    const results = await Promise.allSettled(
-      list.map(async (file) => {
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-          throw new Error(`Неподдерживаемый файл: ${file.name}`)
-        }
-        const uploaded = await uploadAdminMedia(file, title || file.name)
-        setUploadProgress((prev) =>
-          prev ? { ...prev, done: Math.min(prev.total, prev.done + 1) } : prev,
-        )
-        return {
-          id: nextGalleryId(),
-          src: uploaded.url,
-          alt: uploaded.alt || title || file.name,
-          kind: kindFromFile(file),
-        } satisfies GalleryFrame
-      }),
-    )
-
-    const next: GalleryFrame[] = []
-    const errors: string[] = []
-    for (const result of results) {
-      if (result.status === 'fulfilled') next.push(result.value)
-      else errors.push(result.reason instanceof Error ? result.reason.message : 'Ошибка загрузки')
-    }
-
-    if (next.length) setGallery((prev) => [...prev, ...next])
-    if (errors.length) setUploadError(errors[0] ?? 'Ошибка загрузки')
-
-    setUploadBusy(false)
-    setUploadProgress(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  function onGalleryFileDragOver(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if ([...e.dataTransfer.types].includes('Files')) setFileDropActive(true)
-  }
-
-  function onGalleryFileDragLeave(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setFileDropActive(false)
-  }
-
-  function onGalleryFileDrop(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setFileDropActive(false)
-    void handleGalleryFiles(e.dataTransfer.files)
-  }
 
   function validateBeforeSubmit(e: FormEvent<HTMLFormElement>) {
     const normalizedSlug = slugify(slug)
@@ -419,17 +305,6 @@ export function ArticleEditForm({
     !publicSlug || isNew || status !== 'published' ? null : `/articles/${publicSlug}`
   const galleryPayload = serializeGallery(gallery)
 
-  const slugHint =
-    slugCheck === 'checking'
-      ? 'Проверка…'
-      : slugCheck === 'taken'
-        ? 'Slug уже занят'
-        : slugCheck === 'invalid'
-          ? 'Slug пуст после нормализации'
-          : slugCheck === 'available'
-            ? 'Slug свободен'
-            : null
-
   return (
     <>
       <div className="admin-back-link">
@@ -442,12 +317,12 @@ export function ArticleEditForm({
         </button>
       </div>
 
-      <div className="case-edit-head">
+      <div className="admin-edit-head">
         <div>
           <h1 className="admin-title">{pageTitle}</h1>
-          <p className="admin-muted case-edit-head__meta">
+          <p className="admin-muted admin-edit-head__meta">
             {publicSlug ? `/articles/${publicSlug}` : 'Укажите slug'} · {statusLabel}
-            {dirty ? <span className="case-edit-dirty"> · Не сохранено</span> : null}
+            {dirty ? <span className="admin-edit-dirty"> · Не сохранено</span> : null}
           </p>
         </div>
         {previewHref ? (
@@ -468,7 +343,7 @@ export function ArticleEditForm({
       {uploadError ? <AdminFlash error={uploadError} /> : null}
 
       <form
-        className="admin-form admin-form--wide case-edit-form"
+        className="admin-form admin-form--wide admin-edit-form"
         action={saveArticleAction}
         onSubmit={validateBeforeSubmit}
       >
@@ -480,9 +355,9 @@ export function ArticleEditForm({
         <input type="hidden" name="status" value={status} />
         {featured ? <input type="hidden" name="featured" value="on" /> : null}
 
-        <div className="case-edit-layout">
-          <div className="case-edit-main">
-            <section className="case-edit-section">
+        <div className="admin-edit-layout">
+          <div className="admin-edit-main">
+            <section className="admin-edit-section">
               <div className="admin-field">
                 <label className="admin-field-label" htmlFor="title">
                   Заголовок
@@ -611,7 +486,7 @@ export function ArticleEditForm({
               onChange={(e) => void handleGalleryFiles(e.target.files)}
             />
 
-            <CaseGalleryEditor
+            <AdminGalleryEditor
               frames={gallery}
               onChange={(next) => {
                 setGallery(next)
@@ -626,9 +501,9 @@ export function ArticleEditForm({
               onFileDrop={onGalleryFileDrop}
             />
 
-            <section className="case-edit-section">
-              <div className="case-edit-section__head">
-                <h2 className="case-edit-section__title">Текст статьи</h2>
+            <section className="admin-edit-section">
+              <div className="admin-edit-section__head">
+                <h2 className="admin-edit-section__title">Текст статьи</h2>
                 <p className="admin-muted">Основной текст страницы статьи</p>
               </div>
               <RichBlock
@@ -641,7 +516,7 @@ export function ArticleEditForm({
               />
             </section>
 
-            <CaseSeoFields
+            <AdminSeoFields
               title={title}
               summary={excerpt}
               seoTitle={seoTitle}
@@ -651,7 +526,7 @@ export function ArticleEditForm({
             />
           </div>
 
-          <CasePublishAside
+          <AdminPublishAside
             status={status}
             featured={featured}
             dirty={dirty}
@@ -661,6 +536,7 @@ export function ArticleEditForm({
             canPreview={Boolean(previewHref)}
             statusOptions={ARTICLE_STATUS_OPTIONS}
             deleteLabel="Удалить статью"
+            featuredLabel="Выводить на главную"
             previewHint="Опубликуйте статью, чтобы открыть её на сайте"
             onStatusChange={(next) => setStatus(next === 'published' ? 'published' : 'draft')}
             onFeaturedChange={setFeatured}

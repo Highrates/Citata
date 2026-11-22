@@ -1,16 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { AdminFlash, AdminSourceBanner } from '@/components/admin/AdminFlash'
+import { AdminPendingSubmit } from '@/components/admin/AdminPendingSubmit'
 import {
-  CaseGalleryEditor,
+  AdminGalleryEditor,
   type GalleryFrame,
-} from '@/components/admin/CaseGalleryEditor'
-import type { CaseGalleryItem, SiteSettings } from '@/content/types'
+} from '@/components/admin/AdminGalleryEditor'
+import {
+  serializeGallery,
+  snapshotsEqualWithGallery,
+  toGalleryFrames,
+} from '@/components/admin/galleryHelpers'
+import { useAdminFormDirty } from '@/components/admin/useAdminFormDirty'
+import { useGalleryUpload } from '@/components/admin/useGalleryUpload'
+import type { SiteSettings } from '@/content/types'
 import type { AdminDataSource } from '@/lib/admin/data'
 import { saveAboutPageAction } from '@/lib/admin/content-actions'
-import { uploadAdminMedia } from '@/lib/admin/uploadMedia'
 
 type AboutFormProps = {
   settings: SiteSettings
@@ -19,87 +26,75 @@ type AboutFormProps = {
   error?: string
 }
 
-let galleryIdSeq = 0
-function nextGalleryId() {
-  galleryIdSeq += 1
-  return `g-${Date.now()}-${galleryIdSeq}`
+type Snapshot = {
+  aboutText: string
+  years: string
+  brands: string
+  reachMillions: string
+  gallery: GalleryFrame[]
 }
 
-function toFrames(items: CaseGalleryItem[]): GalleryFrame[] {
-  return items.map((g) => ({ ...g, id: nextGalleryId() }))
-}
-
-function serializeGallery(frames: GalleryFrame[]): CaseGalleryItem[] {
-  return frames.map(({ src, alt, kind }) => ({ src, alt, kind }))
+function snapshotFrom(settings: SiteSettings): Snapshot {
+  return {
+    aboutText: settings.aboutText,
+    years: String(settings.aboutStats.years),
+    brands: String(settings.aboutStats.brands),
+    reachMillions: String(settings.aboutStats.reachMillions),
+    gallery: toGalleryFrames(Array.isArray(settings.aboutGallery) ? settings.aboutGallery : []),
+  }
 }
 
 export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
+  const baselineRef = useRef(snapshotFrom(settings))
+  const [aboutText, setAboutText] = useState(baselineRef.current.aboutText)
+  const [years, setYears] = useState(baselineRef.current.years)
+  const [brands, setBrands] = useState(baselineRef.current.brands)
+  const [reachMillions, setReachMillions] = useState(baselineRef.current.reachMillions)
   const [gallery, setGallery] = useState<GalleryFrame[]>(() =>
-    toFrames(Array.isArray(settings.aboutGallery) ? settings.aboutGallery : []),
+    baselineRef.current.gallery.map((g) => ({ ...g })),
   )
-  const [uploadBusy, setUploadBusy] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [fileDropActive, setFileDropActive] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  async function handleGalleryFiles(files: FileList | null) {
-    if (!files?.length) return
-    const list = Array.from(files)
+  const {
+    uploadBusy,
+    uploadProgress,
+    uploadError,
+    setUploadError,
+    fileDropActive,
+    fileInputRef,
+    handleGalleryFiles,
+    onGalleryFileDragOver,
+    onGalleryFileDragLeave,
+    onGalleryFileDrop,
+  } = useGalleryUpload({
+    setGallery,
+    imagesOnly: true,
+  })
+
+  useEffect(() => {
+    const next = snapshotFrom(settings)
+    baselineRef.current = next
+    setAboutText(next.aboutText)
+    setYears(next.years)
+    setBrands(next.brands)
+    setReachMillions(next.reachMillions)
+    setGallery(next.gallery.map((g) => ({ ...g })))
     setUploadError(null)
-    setUploadBusy(true)
-    setUploadProgress({ done: 0, total: list.length })
+  }, [settings, saved, setUploadError])
 
-    const results = await Promise.allSettled(
-      list.map(async (file) => {
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`Только изображения: ${file.name}`)
-        }
-        const uploaded = await uploadAdminMedia(file, file.name)
-        setUploadProgress((prev) =>
-          prev ? { ...prev, done: Math.min(prev.total, prev.done + 1) } : prev,
-        )
-        return {
-          id: nextGalleryId(),
-          src: uploaded.url,
-          alt: uploaded.alt || file.name,
-          kind: 'image' as const,
-        } satisfies GalleryFrame
-      }),
-    )
+  const current = useMemo(
+    () => ({ aboutText, years, brands, reachMillions, gallery }),
+    [aboutText, years, brands, reachMillions, gallery],
+  )
+  const dirty = !snapshotsEqualWithGallery(current, baselineRef.current)
+  const { allowLeave, blockLeave } = useAdminFormDirty(dirty)
 
-    const next: GalleryFrame[] = []
-    const errors: string[] = []
-    for (const result of results) {
-      if (result.status === 'fulfilled') next.push(result.value)
-      else errors.push(result.reason instanceof Error ? result.reason.message : 'Ошибка загрузки')
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    if (uploadBusy) {
+      e.preventDefault()
+      blockLeave()
+      return
     }
-
-    if (next.length) setGallery((prev) => [...prev, ...next])
-    if (errors.length) setUploadError(errors[0] ?? 'Ошибка загрузки')
-
-    setUploadBusy(false)
-    setUploadProgress(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  function onGalleryFileDragOver(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if ([...e.dataTransfer.types].includes('Files')) setFileDropActive(true)
-  }
-
-  function onGalleryFileDragLeave(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setFileDropActive(false)
-  }
-
-  function onGalleryFileDrop(e: DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setFileDropActive(false)
-    void handleGalleryFiles(e.dataTransfer.files)
+    allowLeave()
   }
 
   const galleryPayload = serializeGallery(gallery)
@@ -109,6 +104,7 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
       <div className="admin-page-head">
         <div>
           <h1 className="admin-title">О нас</h1>
+          {dirty ? <p className="admin-muted admin-edit-dirty">Не сохранено</p> : null}
         </div>
         <Link href="/about" className="admin-btn admin-btn--outline" target="_blank" rel="noreferrer">
           Открыть на сайте
@@ -119,7 +115,7 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
       <AdminFlash saved={saved} error={error} />
       {uploadError ? <AdminFlash error={uploadError} /> : null}
 
-      <form className="admin-form admin-form--wide" action={saveAboutPageAction}>
+      <form className="admin-form admin-form--wide" action={saveAboutPageAction} onSubmit={onSubmit}>
         <input type="hidden" name="galleryJson" value={JSON.stringify(galleryPayload)} />
         <input
           ref={fileInputRef}
@@ -139,7 +135,8 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
             id="aboutText"
             name="aboutText"
             rows={8}
-            defaultValue={settings.aboutText}
+            value={aboutText}
+            onChange={(e) => setAboutText(e.target.value)}
             required
           />
         </div>
@@ -156,7 +153,8 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
               name="years"
               type="number"
               min={0}
-              defaultValue={settings.aboutStats.years}
+              value={years}
+              onChange={(e) => setYears(e.target.value)}
               required
             />
           </div>
@@ -170,7 +168,8 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
               name="brands"
               type="number"
               min={0}
-              defaultValue={settings.aboutStats.brands}
+              value={brands}
+              onChange={(e) => setBrands(e.target.value)}
               required
             />
           </div>
@@ -184,13 +183,14 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
               name="reachMillions"
               type="number"
               min={0}
-              defaultValue={settings.aboutStats.reachMillions}
+              value={reachMillions}
+              onChange={(e) => setReachMillions(e.target.value)}
               required
             />
           </div>
         </div>
 
-        <CaseGalleryEditor
+        <AdminGalleryEditor
           frames={gallery}
           onChange={setGallery}
           uploadBusy={uploadBusy}
@@ -206,9 +206,8 @@ export function AboutForm({ settings, source, saved, error }: AboutFormProps) {
         />
 
         <div className="admin-form-actions">
-          <button type="submit" className="admin-btn admin-btn--accent" disabled={uploadBusy}>
-            Сохранить
-          </button>
+          <AdminPendingSubmit disabled={uploadBusy} />
+          {dirty ? <p className="admin-edit-dirty-hint">Есть несохранённые изменения</p> : null}
         </div>
       </form>
     </>

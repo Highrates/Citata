@@ -8,7 +8,7 @@ export type CaseBlock =
 
 export type CaseStatus = 'draft' | 'published' | 'hidden'
 
-export type CaseGalleryItem = {
+export type GalleryItem = {
   src: string
   alt: string
   kind: 'image' | 'video'
@@ -27,7 +27,7 @@ export type Case = {
   featured?: boolean
   status?: CaseStatus
   sortOrder: number
-  gallery?: CaseGalleryItem[]
+  gallery?: GalleryItem[]
   /** @deprecated legacy fixtures only — Payload uses `description` HTML */
   blocks?: CaseBlock[]
   seo?: { title?: string; description?: string }
@@ -54,13 +54,15 @@ export type Article = {
   status?: ArticleStatus
   /** HTML из RichBlock */
   description?: string
-  gallery?: CaseGalleryItem[]
+  gallery?: GalleryItem[]
   /** @deprecated prefer `description` HTML */
   sections: ArticleSection[]
   seo?: { title?: string; description?: string }
 }
 
 export type PressMention = {
+  /** Payload document id when loaded from CMS */
+  id?: number
   title: string
   source: string
   url: string
@@ -79,7 +81,7 @@ export type SiteSettings = {
   aboutText: string
   aboutStats: { years: number; brands: number; reachMillions: number }
   /** Первое фото — основной портрет на /about */
-  aboutGallery: CaseGalleryItem[]
+  aboutGallery: GalleryItem[]
   contacts: { name: string; role: string; email: string; telegram?: string }[]
   legal: {
     disclaimer: string

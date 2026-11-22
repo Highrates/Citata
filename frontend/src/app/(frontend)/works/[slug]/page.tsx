@@ -9,6 +9,7 @@ import { cases as fixtureCases } from '@/content/cases'
 import { getCases } from '@/lib/content'
 import { fetchCaseBySlug, fetchCases } from '@/lib/content-cases'
 import { isCasePreviewAuthorized } from '@/lib/preview'
+import { ensureVideoAutoplay } from '@/lib/ensure-video-autoplay'
 import { absoluteUrl, breadcrumbJsonLd } from '@/lib/seo'
 import type { Case } from '@/content/types'
 
@@ -47,7 +48,7 @@ function otherCases(all: Case[], slug: string, limit = 3): Case[] {
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params
   const sp = await searchParams
-  const preview = isCasePreviewAuthorized(sp.preview)
+  const preview = await isCasePreviewAuthorized(sp.preview, slug)
   const item = await fetchCaseBySlug(slug, { preview })
   if (!item) return {}
 
@@ -67,7 +68,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function CasePage({ params, searchParams }: Props) {
   const { slug } = await params
   const sp = await searchParams
-  const preview = isCasePreviewAuthorized(sp.preview)
+  const preview = await isCasePreviewAuthorized(sp.preview, slug)
   const item = await fetchCaseBySlug(slug, { preview })
   if (!item) notFound()
 
@@ -116,9 +117,12 @@ export default async function CasePage({ params, searchParams }: Props) {
                 <video
                   className="case-page__cover-video"
                   src={item.cover}
-                  controls
+                  autoPlay
+                  muted
+                  loop
                   playsInline
-                  preload="metadata"
+                  controls
+                  preload="auto"
                 />
               ) : (
                 <Image
@@ -151,7 +155,7 @@ export default async function CasePage({ params, searchParams }: Props) {
         {item.description ? (
           <div
             className="case-page__body case-rich-html"
-            dangerouslySetInnerHTML={{ __html: item.description }}
+            dangerouslySetInnerHTML={{ __html: ensureVideoAutoplay(item.description) }}
           />
         ) : bodyBlocks?.length ? (
           <div className="case-page__body">
@@ -169,9 +173,12 @@ export default async function CasePage({ params, searchParams }: Props) {
                     <video
                       className="case-page__gallery-video"
                       src={frame.src}
-                      controls
+                      autoPlay
+                      muted
+                      loop
                       playsInline
-                      preload="metadata"
+                      controls
+                      preload="auto"
                     />
                   ) : (
                     <Image
