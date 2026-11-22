@@ -1,0 +1,49 @@
+{
+  "name": "citata-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ЦИТАТА — Payload CMS API и /payload",
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev -p 3001",
+    "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
+    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
+    "seed:cases": "tsx scripts/seed-cases-from-fixtures.ts",
+    "seed:articles": "tsx scripts/seed-articles-from-fixtures.ts",
+    "seed:site": "tsx scripts/seed-site-from-fixtures.ts",
+    "seed:press": "tsx scripts/seed-press-from-fixtures.ts",
+    "seed": "npm run seed:site && npm run seed:cases && npm run seed:articles && npm run seed:press",
+    "postinstall": "payload generate:importmap || true"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "3.85.2",
+    "@payloadcms/next": "3.85.2",
+    "@payloadcms/plugin-seo": "3.85.2",
+    "@payloadcms/richtext-lexical": "3.85.2",
+    "@payloadcms/storage-s3": "3.85.2",
+    "@payloadcms/ui": "3.85.2",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "graphql": "^16.10.0",
+    "next": "15.4.11",
+    "payload": "3.85.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "15.4.11",
+    "tsx": "^4.23.0",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,165 @@
+import type { CollectionConfig } from 'payload'
+
+import { publishedOnly } from '../access'
+import { revalidateArticle, revalidateArticleDelete } from '../hooks/revalidateArticle'
+
+export const Articles: CollectionConfig = {
+  slug: 'articles',
+  labels: {
+    singular: 'Статья',
+    plural: 'Статьи',
+  },
+  access: {
+    read: publishedOnly,
+  },
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'author', 'publishedAt', 'updatedAt'],
+  },
+  hooks: {
+    afterChange: [revalidateArticle],
+    afterDelete: [revalidateArticleDelete],
+  },
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+      label: 'Заголовок',
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      label: 'URL (slug)',
+      admin: {
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'excerpt',
+      type: 'textarea',
+      label: 'Краткое описание',
+    },
+    {
+      name: 'cover',
+      type: 'upload',
+      relationTo: 'media',
+      required: true,
+      label: 'Обложка',
+    },
+    {
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'authors',
+      required: true,
+      label: 'Автор',
+    },
+    {
+      name: 'publishedAt',
+      type: 'date',
+      required: true,
+      label: 'Дата публикации',
+      admin: {
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'readingTime',
+      type: 'number',
+      label: 'Время чтения (мин)',
+      admin: {
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'sections',
+      type: 'blocks',
+      label: 'Содержание',
+      required: true,
+      blocks: [
+        {
+          slug: 'paragraph',
+          labels: { singular: 'Абзац', plural: 'Абзацы' },
+          fields: [
+            {
+              name: 'text',
+              type: 'textarea',
+              required: true,
+              label: 'Текст',
+            },
+          ],
+        },
+        {
+          slug: 'heading',
+          labels: { singular: 'Заголовок', plural: 'Заголовки' },
+          fields: [
+            {
+              name: 'text',
+              type: 'text',
+              required: true,
+              label: 'Текст',
+            },
+          ],
+        },
+        {
+          slug: 'quote',
+          labels: { singular: 'Цитата', plural: 'Цитаты' },
+          fields: [
+            {
+              name: 'text',
+              type: 'textarea',
+              required: true,
+              label: 'Текст',
+            },
+          ],
+        },
+        {
+          slug: 'list',
+          labels: { singular: 'Список', plural: 'Списки' },
+          fields: [
+            {
+              name: 'items',
+              type: 'array',
+              required: true,
+              fields: [
+                {
+                  name: 'text',
+                  type: 'text',
+                  required: true,
+                  label: 'Пункт',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'featured',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Показать на главной',
+      admin: {
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      defaultValue: 'draft',
+      options: [
+        { label: 'Черновик', value: 'draft' },
+        { label: 'Опубликовано', value: 'published' },
+      ],
+      admin: {
+        position: 'sidebar',
+      },
+    },
+  ],
+}

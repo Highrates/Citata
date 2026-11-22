@@ -1,0 +1,13 @@
+export function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return items
+  if (fromIndex >= items.length || toIndex >= items.length) return items
+
+  const next = [...items]
+  const [removed] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, removed)
+  return next
+}
+
+export function sortOrderFromIndex(index: number) {
+  return index + 1
+}
