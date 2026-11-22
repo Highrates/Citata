@@ -147,9 +147,8 @@ export function SiteBar({
       return nodes
     }
 
-    const focusables = getFocusables()
-    const firstMenuLink = focusables.find((el) => el !== burgerRef.current)
-    ;(firstMenuLink ?? burgerRef.current)?.focus()
+    // Don't steal focus into a link on open — that showed a blue focus ring on tap.
+    // Keyboard users still Tab into the menu; Escape / trap remain.
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
