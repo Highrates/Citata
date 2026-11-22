@@ -74,6 +74,17 @@ img {
   padding-top: 72px;
 }
 
+.works-page__title {
+  margin: 0;
+  padding: 28px var(--container-fluid-margin) 8px;
+  color: var(--accent);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: var(--fw-bold);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
 /* Home hero */
 .home-hero {
   display: flex;
@@ -1837,7 +1848,7 @@ img {
 
 .article-page__title {
   margin: 0;
-  color: var(--text);
+  color: var(--accent);
   font-size: clamp(1.85rem, 4.2vw, 3.4rem);
   font-weight: 900;
   line-height: 1.08;
@@ -2369,6 +2380,8 @@ img {
   align-items: flex-start;
   gap: 20px;
   max-width: 40rem;
+  /* Clear absolute back arrow on desktop so text doesn't sit under it */
+  padding-top: calc(clamp(24px, 2.6vw, 32px) + 18px);
 }
 
 .about-split__back {
@@ -2590,6 +2603,10 @@ video.about-split__image {
     padding-top: 28px;
   }
 
+  .about-description__main {
+    padding-top: 0;
+  }
+
   .about-split__back {
     position: fixed;
     top: max(14px, env(safe-area-inset-top, 0px));
@@ -2663,6 +2680,7 @@ video.about-split__image {
   .about-description__main {
     gap: 14px;
     max-width: none;
+    padding-top: 0;
   }
 
   .about-split__back {
@@ -3278,6 +3296,11 @@ video.about-split__image {
 
   .home-hero__cards {
     padding: 0 16px 32px;
+  }
+
+  .works-page__title {
+    padding: 20px 16px 4px;
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
   }
 
   .home-cases-grid__row {

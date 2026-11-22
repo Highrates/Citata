@@ -98,9 +98,9 @@ export function ServicesPageContent({ services, defaultImage }: ServicesPageCont
       return
     }
 
-    gsap.set(slogan, { y: 28, opacity: 0 })
-    gsap.set(marks, { opacity: 0, y: 12 })
-    gsap.set(items, { y: 140, opacity: 0 })
+    gsap.set(slogan, { y: 20, opacity: 0 })
+    gsap.set(marks, { opacity: 0, y: 10 })
+    gsap.set(items, { y: 28, opacity: 0 })
     gsap.set(left, { xPercent: 0 })
     gsap.set(right, { xPercent: 0 })
 
@@ -112,21 +112,21 @@ export function ServicesPageContent({ services, defaultImage }: ServicesPageCont
         },
       })
 
-      tl.to(slogan, { y: 0, opacity: 1, duration: 0.75 }, 0)
-      tl.to(marks, { opacity: 1, y: 0, duration: 0.6, stagger: 0.1 }, 0.15)
+      tl.to(slogan, { y: 0, opacity: 1, duration: 0.5 }, 0)
+      tl.to(marks, { opacity: 1, y: 0, duration: 0.4, stagger: 0.06 }, 0.08)
       tl.to(
         items,
         {
           y: 0,
           opacity: 1,
-          duration: 1.15,
+          duration: 0.45,
           ease: 'power3.out',
-          stagger: { amount: 4.8, from: 'start', ease: 'power2.in' },
+          stagger: { amount: 0.55, from: 'start' },
         },
-        0.4,
+        0.12,
       )
-      tl.to(left, { xPercent: -100, duration: 0.85, ease: 'power3.inOut' }, 1.1)
-      tl.to(right, { xPercent: 100, duration: 0.85, ease: 'power3.inOut' }, 1.1)
+      tl.to(left, { xPercent: -100, duration: 0.55, ease: 'power3.inOut' }, 0.28)
+      tl.to(right, { xPercent: 100, duration: 0.55, ease: 'power3.inOut' }, 0.28)
     }, rootRef)
 
     return () => {

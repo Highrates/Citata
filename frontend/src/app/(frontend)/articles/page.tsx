@@ -12,14 +12,13 @@ export const revalidate = 300
 export default async function ArticlesPage() {
   const items = (await fetchArticles())
     .filter((item) => item.cover)
-    .map(({ slug, title, cover, coverAlt, excerpt }) => ({
+    .map(({ slug, title, cover, coverAlt }) => ({
       slug,
       title,
       cover,
       coverAlt: coverAlt || title,
-      summary: excerpt,
       href: `/articles/${slug}`,
     }))
 
-  return <WorksPageContent items={items} label="Новости" title="Новости" />
+  return <WorksPageContent items={items} label="Новости" title="Новости" showTitle />
 }

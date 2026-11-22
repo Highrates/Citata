@@ -15,9 +15,10 @@
     "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
     "seed:cases": "tsx scripts/seed-cases-from-fixtures.ts",
     "seed:articles": "tsx scripts/seed-articles-from-fixtures.ts",
+    "seed:services": "tsx scripts/seed-services-from-fixtures.ts",
     "seed:site": "tsx scripts/seed-site-from-fixtures.ts",
     "seed:press": "tsx scripts/seed-press-from-fixtures.ts",
-    "seed": "npm run seed:site && npm run seed:cases && npm run seed:articles && npm run seed:press",
+    "seed": "npm run seed:site && npm run seed:cases && npm run seed:articles && npm run seed:services && npm run seed:press",
     "postinstall": "payload generate:importmap || true"
   },
   "dependencies": {

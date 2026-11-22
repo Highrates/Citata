@@ -51,6 +51,8 @@ Seed:
 
 ```bash
 npm run seed -w backend
+# includes site, cases, articles, services, press — if /admin/services is empty on prod, run:
+# npm run seed:services -w backend
 ```
 
 ---

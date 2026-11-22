@@ -148,7 +148,10 @@ export async function fetchAdminArticleBySlug(
 export async function fetchAdminServices(): Promise<{ items: Service[]; source: AdminDataSource }> {
   await requireAdminDataAccess()
   const fromPayload = await tryPayload(fetchAllPayloadServices)
-  if (fromPayload) return { items: fromPayload, source: 'payload' }
+  // Empty Payload array is truthy — don't treat it as success (public site falls back to fixtures).
+  if (fromPayload && fromPayload.length > 0) {
+    return { items: fromPayload, source: 'payload' }
+  }
   return { items: getFixtureServices(), source: 'fixtures' }
 }
 
