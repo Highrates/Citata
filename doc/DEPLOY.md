@@ -119,7 +119,19 @@ pm2 start npm --name citata-web -- start
 pm2 save
 ```
 
-Обновление:
+Обновление с локальной машины:
+
+```bash
+npm run deploy
+# или с сообщением коммита:
+npm run deploy -- "fix contacts layout"
+```
+
+Скрипт `scripts/deploy.sh`: коммитит незакоммиченное → `git push` → на VPS `git pull`, migrate, build backend/frontend, `pm2 restart citata-api` + `citata-web`.
+
+Нужен SSH на `root@194.58.118.247` (ключ) либо `SSHPASS=... npm run deploy`.
+
+Обновление вручную на сервере:
 
 ```bash
 cd /var/www/citata && git pull && npm ci

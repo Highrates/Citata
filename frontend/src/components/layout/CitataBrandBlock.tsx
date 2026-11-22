@@ -35,7 +35,8 @@ export function CitataBrandBlock({
           width={1663}
           height={171}
           className="preloader__logo"
-          decoding="async"
+          decoding="sync"
+          fetchPriority="high"
         />
       </div>
 

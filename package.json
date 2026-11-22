@@ -14,7 +14,8 @@
     "build:back": "npm run build -w backend",
     "lint": "npm run lint -w frontend && npm run lint -w backend",
     "test": "npm run test -w frontend",
-    "seed": "npm run seed -w backend"
+    "seed": "npm run seed -w backend",
+    "deploy": "bash scripts/deploy.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
