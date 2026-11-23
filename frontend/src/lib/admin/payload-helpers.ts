@@ -2,7 +2,7 @@ import 'server-only'
 
 import { hasPayloadApiKey, payloadGet, payloadMutate, type PayloadListResponse } from '@/lib/api/payload-client'
 import { hasValidAdminSessionCookie } from '@/lib/admin/session'
-import { ensureAuthor, ensureMediaByUrl } from '@/lib/admin/ensure-content'
+import { ensureAuthor, ensureMediaByUrl, resolveMediaId } from '@/lib/admin/ensure-content'
 import { buildPayloadWhereParams } from '@/lib/admin/payload-where'
 import type {
   Article as PayloadArticle,
@@ -11,7 +11,7 @@ import type {
 } from '@/payload-types'
 import type { PressMention as PayloadPressMention, SiteSetting } from '@/payload-types'
 
-export { ensureAuthor, ensureMediaByUrl }
+export { ensureAuthor, ensureMediaByUrl, resolveMediaId }
 
 export async function requireAdminSession() {
   if (!(await hasValidAdminSessionCookie())) {

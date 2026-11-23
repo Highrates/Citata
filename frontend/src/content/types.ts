@@ -12,6 +12,8 @@ export type GalleryItem = {
   src: string
   alt: string
   kind: 'image' | 'video'
+  /** Payload media id when known (from upload or populated relation) */
+  mediaId?: number
 }
 
 export type Case = {

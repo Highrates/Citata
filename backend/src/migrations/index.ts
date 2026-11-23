@@ -1,5 +1,6 @@
 import * as migration_20261122_182916_initial from './20261122_182916_initial';
 import * as migration_20261122_225500_articles_gallery_description from './20261122_225500_articles_gallery_description';
+import * as migration_20261123_084900_articles_author_nullable from './20261123_084900_articles_author_nullable';
 
 export const migrations = [
   {
@@ -11,5 +12,10 @@ export const migrations = [
     up: migration_20261122_225500_articles_gallery_description.up,
     down: migration_20261122_225500_articles_gallery_description.down,
     name: '20261122_225500_articles_gallery_description',
+  },
+  {
+    up: migration_20261123_084900_articles_author_nullable.up,
+    down: migration_20261123_084900_articles_author_nullable.down,
+    name: '20261123_084900_articles_author_nullable',
   },
 ];

@@ -12,12 +12,12 @@ import type {
 import { adminPath } from '@/lib/admin/constants'
 import {
   ensureAuthor,
-  ensureMediaByUrl,
   findArticleIdBySlug,
   findCaseIdBySlug,
   findServiceIdBySlug,
   getAdminPayload,
   hasPayloadDatabase,
+  resolveMediaId,
 } from '@/lib/admin/payload-helpers'
 import { mapArticleToPayloadData } from '@/lib/map-article'
 import { mapCaseToPayloadData } from '@/lib/map-case'
@@ -223,13 +223,14 @@ export async function saveCaseAction(formData: FormData) {
 
     const galleryMediaIds: number[] = []
     for (const item of gallery) {
-      if (!item.src) continue
-      const id = await ensureMediaByUrl(payload, item.src, item.alt || title)
+      if (!item.src && item.mediaId == null) continue
+      const id = await resolveMediaId(payload, item, item.alt || title)
       galleryMediaIds.push(id)
     }
 
     const coverId =
-      galleryMediaIds[0] ?? (await ensureMediaByUrl(payload, coverUrl, title))
+      galleryMediaIds[0] ??
+      (await resolveMediaId(payload, { src: coverUrl, mediaId: gallery[0]?.mediaId }, title))
 
     const existingId = originalSlug ? await findCaseIdBySlug(payload, originalSlug) : undefined
     const sortOrder = existingId
@@ -399,16 +400,17 @@ export async function saveArticleAction(formData: FormData) {
 
     const galleryMediaIds: number[] = []
     for (const item of gallery) {
-      if (!item.src) continue
-      const id = await ensureMediaByUrl(payload, item.src, item.alt || title)
+      if (!item.src && item.mediaId == null) continue
+      const id = await resolveMediaId(payload, item, item.alt || title)
       galleryMediaIds.push(id)
     }
 
     const coverId =
-      galleryMediaIds[0] ?? (await ensureMediaByUrl(payload, coverUrl, title))
+      galleryMediaIds[0] ??
+      (await resolveMediaId(payload, { src: coverUrl, mediaId: gallery[0]?.mediaId }, title))
     const authorId = authorName
       ? await ensureAuthor(payload, authorName, formString(formData, 'role'))
-      : null
+      : undefined
 
     const seoTitle = formString(formData, 'seoTitle') || undefined
     const seoDescription = formString(formData, 'seoDescription') || undefined
@@ -435,14 +437,13 @@ export async function saveArticleAction(formData: FormData) {
       },
     }
 
-    const data = {
+    const data: Record<string, unknown> = {
       ...mapArticleToPayloadData(article, {
         coverId,
-        authorId: authorId ?? undefined,
+        authorId,
         galleryMediaIds,
       }),
       cover: coverId,
-      author: authorId,
       readingTime,
       gallery: galleryMediaIds.map((media) => ({ media })),
       status,
@@ -453,6 +454,8 @@ export async function saveArticleAction(formData: FormData) {
         description: seoDescription || null,
       },
     }
+    // null clears author; requires migration 20261123_084900 (author_id nullable).
+    data.author = authorId ?? null
 
     const existingId = originalSlug ? await findArticleIdBySlug(payload, originalSlug) : undefined
     const duplicateId = await findArticleIdBySlug(payload, slug)
@@ -592,8 +595,8 @@ export async function saveAboutPageAction(formData: FormData) {
 
     const aboutGalleryMediaIds: number[] = []
     for (const item of gallery) {
-      if (!item.src) continue
-      const id = await ensureMediaByUrl(payload, item.src, item.alt || 'О нас')
+      if (!item.src && item.mediaId == null) continue
+      const id = await resolveMediaId(payload, item, item.alt || 'О нас')
       aboutGalleryMediaIds.push(id)
     }
 
@@ -741,7 +744,11 @@ export async function saveServiceAction(formData: FormData) {
       sortOrder = doc.sortOrder ?? 0
     }
 
-    const coverId = await ensureMediaByUrl(payload, coverUrl, coverAlt)
+    const coverId = await resolveMediaId(
+      payload,
+      { src: coverUrl, mediaId: formNumber(formData, 'coverMediaId', 0) || undefined },
+      coverAlt,
+    )
     const payloadData = mapServiceToPayloadData(
       { title, slug, description, image: coverUrl, coverAlt, sortOrder },
       coverId,

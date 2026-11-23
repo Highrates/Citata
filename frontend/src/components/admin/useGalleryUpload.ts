@@ -62,6 +62,7 @@ export function useGalleryUpload({
             src: uploaded.url,
             alt: uploaded.alt || altFallback || file.name,
             kind: imagesOnly ? ('image' as const) : kindFromFile(file),
+            mediaId: uploaded.id,
           } satisfies GalleryFrame
         }),
       )

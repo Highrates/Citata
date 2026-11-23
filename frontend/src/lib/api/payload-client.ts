@@ -71,7 +71,10 @@ export async function payloadMutate<T>(
     throw new Error('PAYLOAD_API_KEY не задан — запись в backend недоступна')
   }
 
-  const url = `${getApiBase()}${path.startsWith('/') ? path : `/${path}`}`
+  const pathWithSlash = path.startsWith('/') ? path : `/${path}`
+  // Localized collections (seo meta) need an explicit locale on write.
+  const sep = pathWithSlash.includes('?') ? '&' : '?'
+  const url = `${getApiBase()}${pathWithSlash}${sep}locale=ru`
   const res = await fetch(url, {
     method,
     headers: {
@@ -83,7 +86,19 @@ export async function payloadMutate<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Payload ${method} ${path} failed: ${res.status} ${text}`)
+    let detail = text
+    try {
+      const parsed = JSON.parse(text) as {
+        errors?: { message?: string }[]
+        message?: string
+      }
+      const messages = parsed.errors?.map((e) => e.message).filter(Boolean)
+      if (messages?.length) detail = messages.join('; ')
+      else if (parsed.message) detail = parsed.message
+    } catch {
+      /* keep raw */
+    }
+    throw new Error(`Payload ${method} ${path} failed: ${res.status} ${detail}`)
   }
 
   if (res.status === 204) return undefined as T

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { ensureAuthor, ensureMediaByUrl } from '@/lib/admin/ensure-content'
+import { ensureAuthor, ensureMediaByUrl, resolveMediaId } from '@/lib/admin/ensure-content'
 import { unwrapPayloadDoc } from '@/lib/api/unwrap-payload-doc'
 
 /**
@@ -97,4 +97,17 @@ test('ensureMediaByUrl refuses stub create when missing', async () => {
     /Медиа не найдено/,
   )
   assert.equal(created, 0)
+})
+
+test('resolveMediaId prefers explicit mediaId', async () => {
+  let finds = 0
+  const payload = clientWithUnwrap({
+    find: async () => {
+      finds += 1
+      return { docs: [], totalDocs: 0, hasNextPage: false }
+    },
+  })
+  const id = await resolveMediaId(payload, { src: 'https://x/a.mp4', mediaId: 77 }, 'Alt')
+  assert.equal(id, 77)
+  assert.equal(finds, 0)
 })

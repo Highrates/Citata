@@ -52,10 +52,17 @@ function mapGallery(doc: PayloadArticle): GalleryItem[] {
   for (const row of doc.gallery ?? []) {
     const src = resolveMediaUrl(row.media)
     if (!src) continue
+    const mediaId =
+      typeof row.media === 'number'
+        ? row.media
+        : row.media && typeof row.media === 'object' && 'id' in row.media
+          ? row.media.id
+          : undefined
     items.push({
       src,
       alt: resolveMediaAlt(row.media, doc.title),
       kind: mediaKind(row.media),
+      ...(typeof mediaId === 'number' ? { mediaId } : {}),
     })
   }
   return items
@@ -176,7 +183,7 @@ export function mapArticleToPayloadData(
     slug: article.slug,
     excerpt: article.excerpt,
     cover: options?.coverId,
-    author: options?.authorId,
+    ...(options?.authorId != null ? { author: options.authorId } : {}),
     publishedAt: article.publishedAt,
     readingTime: article.readingTime,
     featured: article.featured ?? false,

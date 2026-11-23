@@ -18,25 +18,51 @@ type MediaDoc = { id: number; url?: string | null; filename?: string | null }
 type AuthorDoc = { id: number; name: string; role?: string | null }
 
 function mediaLookupCandidates(url: string): string[] {
-  const trimmed = url.trim()
+  const trimmed = url.trim().split('#')[0]
   const out = new Set<string>()
   if (trimmed) out.add(trimmed)
 
   try {
     const parsed = new URL(trimmed)
     out.add(parsed.pathname)
+    out.add(`${parsed.origin}${parsed.pathname}`)
     const base = parsed.pathname.split('/').pop()
-    if (base) out.add(base)
+    if (base) {
+      out.add(base)
+      try {
+        out.add(decodeURIComponent(base))
+      } catch {
+        /* ignore */
+      }
+    }
   } catch {
-    // relative path
     const base = trimmed.split('/').pop()?.split('?')[0]
     if (base) out.add(base)
   }
 
   const filename = trimmed.split('/').pop()?.split('?')[0]
-  if (filename) out.add(filename)
+  if (filename) {
+    out.add(filename)
+    try {
+      out.add(decodeURIComponent(filename))
+    } catch {
+      /* ignore */
+    }
+  }
 
   return [...out]
+}
+
+/** Prefer known Payload media id; fall back to URL/filename lookup. */
+export async function resolveMediaId(
+  payload: EnsureClient,
+  item: { src: string; alt?: string; mediaId?: number },
+  altFallback: string,
+): Promise<number> {
+  if (typeof item.mediaId === 'number' && Number.isFinite(item.mediaId)) {
+    return item.mediaId
+  }
+  return ensureMediaByUrl(payload, item.src, item.alt || altFallback)
 }
 
 /**

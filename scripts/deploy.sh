@@ -56,11 +56,12 @@ echo "==> Push to GitHub ($REMOTE/$BRANCH)"
 git push "$REMOTE" "$BRANCH"
 echo
 
-ssh_cmd=(ssh)
+ssh_opts=(-o ServerAliveInterval=20 -o ServerAliveCountMax=12 -o ConnectTimeout=30)
+ssh_cmd=(ssh "${ssh_opts[@]}")
 if [[ -n "${SSHPASS:-}" ]] && command -v sshpass >/dev/null 2>&1; then
-  ssh_cmd=(sshpass -e ssh)
+  ssh_cmd=(sshpass -e ssh "${ssh_opts[@]}")
 elif [[ -n "${DEPLOY_SSH_KEY:-}" ]]; then
-  ssh_cmd=(ssh -i "$DEPLOY_SSH_KEY" -o IdentitiesOnly=yes)
+  ssh_cmd=(ssh -i "$DEPLOY_SSH_KEY" -o IdentitiesOnly=yes "${ssh_opts[@]}")
 fi
 
 echo "==> Deploy on server"
@@ -90,10 +91,15 @@ if [[ -f src/payload-types.ts ]]; then
   # frontend не зависит от пакета payload — убираем augmentation
   sed -i "/^declare module 'payload'/,/^}/d" ../frontend/src/payload-types.ts || true
 fi
-npm run migrate || true
+npm run migrate
+
+# Освобождаем RAM на 2GB VPS на время сборки
+echo "-> pause PM2 apps for build"
+pm2 stop citata-web citata-api 2>/dev/null || true
 
 echo "-> build backend"
 npm run build
+echo "-> start citata-api"
 if pm2 describe citata-api >/dev/null 2>&1; then
   pm2 restart citata-api --update-env
 else
@@ -106,6 +112,7 @@ for i in $(seq 1 30); do
     echo "   API ready"
     break
   fi
+  echo "   waiting API... $i"
   sleep 2
   if [[ "$i" -eq 30 ]]; then
     echo "Warning: API не ответил вовремя, продолжаем сборку frontend" >&2
@@ -115,6 +122,7 @@ done
 echo "-> build frontend"
 cd "$APP_DIR/frontend"
 npm run build
+echo "-> start citata-web"
 if pm2 describe citata-web >/dev/null 2>&1; then
   pm2 restart citata-web --update-env
 else
@@ -123,6 +131,7 @@ fi
 
 pm2 save
 pm2 status citata-api citata-web
+echo "-> remote deploy finished"
 REMOTE
 
 echo

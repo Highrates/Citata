@@ -24,7 +24,12 @@ export function toGalleryFrames(items: GalleryItem[]): GalleryFrame[] {
 }
 
 export function serializeGallery(frames: GalleryFrame[]): GalleryItem[] {
-  return frames.map(({ src, alt, kind }) => ({ src, alt, kind }))
+  return frames.map(({ src, alt, kind, mediaId }) => ({
+    src,
+    alt,
+    kind,
+    ...(typeof mediaId === 'number' ? { mediaId } : {}),
+  }))
 }
 
 export function initialCoverGallery(opts: {
