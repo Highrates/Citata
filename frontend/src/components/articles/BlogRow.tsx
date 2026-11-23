@@ -32,7 +32,9 @@ export function BlogRow({ item }: BlogRowProps) {
 
       <div className="blog-row__main">
         <span className="blog-row__meta">
-          {formatArticleDateRu(item.publishedAt)} · {formatReadingTimeRu(item.readingTime)}
+          {[formatArticleDateRu(item.publishedAt), formatReadingTimeRu(item.readingTime)]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
         <span className="blog-row__title">{item.title}</span>
       </div>

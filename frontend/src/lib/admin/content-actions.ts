@@ -378,8 +378,9 @@ export async function saveArticleAction(formData: FormData) {
     const title = formString(formData, 'title')
     const authorName = formString(formData, 'author')
     const publishedAt = formString(formData, 'publishedAt')
+    const readingTimeRaw = formString(formData, 'readingTime')
 
-    if (!title || !slug || !authorName || !publishedAt) {
+    if (!title || !slug || !publishedAt) {
       redirectWithError(basePath, 'Заполните обязательные поля')
     }
 
@@ -405,11 +406,14 @@ export async function saveArticleAction(formData: FormData) {
 
     const coverId =
       galleryMediaIds[0] ?? (await ensureMediaByUrl(payload, coverUrl, title))
-    const authorId = await ensureAuthor(payload, authorName, formString(formData, 'role'))
+    const authorId = authorName
+      ? await ensureAuthor(payload, authorName, formString(formData, 'role'))
+      : null
 
     const seoTitle = formString(formData, 'seoTitle') || undefined
     const seoDescription = formString(formData, 'seoDescription') || undefined
     const description = formString(formData, 'description') || undefined
+    const readingTime = readingTimeRaw ? formNumber(formData, 'readingTime', 0) : null
 
     const article = {
       slug,
@@ -419,7 +423,7 @@ export async function saveArticleAction(formData: FormData) {
       coverAlt: gallery[0]?.alt || title,
       author: { name: authorName, role: formString(formData, 'role') },
       publishedAt: new Date(publishedAt).toISOString(),
-      readingTime: formNumber(formData, 'readingTime', 3),
+      readingTime: readingTime ?? undefined,
       featured: formBool(formData, 'featured') && status === 'published',
       status,
       description,
@@ -432,9 +436,14 @@ export async function saveArticleAction(formData: FormData) {
     }
 
     const data = {
-      ...mapArticleToPayloadData(article, { coverId, authorId, galleryMediaIds }),
+      ...mapArticleToPayloadData(article, {
+        coverId,
+        authorId: authorId ?? undefined,
+        galleryMediaIds,
+      }),
       cover: coverId,
       author: authorId,
+      readingTime,
       gallery: galleryMediaIds.map((media) => ({ media })),
       status,
       description: description || null,

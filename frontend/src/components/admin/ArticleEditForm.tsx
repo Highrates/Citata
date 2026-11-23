@@ -79,7 +79,7 @@ function snapshotFrom(item: Article | undefined): FormSnapshot {
     excerpt: item?.excerpt ?? '',
     author: item?.author.name ?? '',
     role: item?.author.role ?? '',
-    readingTime: String(item?.readingTime ?? 3),
+    readingTime: item?.readingTime != null ? String(item.readingTime) : '',
     publishedAt: item?.publishedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
     description: initialDescription(item),
     seoTitle: item?.seo?.title ?? '',
@@ -282,12 +282,6 @@ export function ArticleEditForm({
       blockLeave()
       return
     }
-    if (!author.trim()) {
-      e.preventDefault()
-      setFormError('Укажите автора')
-      blockLeave()
-      return
-    }
     if (slugCheck === 'taken' || slugCheck === 'invalid') {
       e.preventDefault()
       setFormError(
@@ -431,7 +425,6 @@ export function ArticleEditForm({
                     name="author"
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
-                    required
                   />
                 </div>
                 <div className="admin-field">
@@ -455,7 +448,7 @@ export function ArticleEditForm({
                     id="readingTime"
                     name="readingTime"
                     type="number"
-                    min={1}
+                    min={0}
                     value={readingTime}
                     onChange={(e) => setReadingTime(e.target.value)}
                   />

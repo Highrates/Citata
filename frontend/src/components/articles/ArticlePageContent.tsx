@@ -76,7 +76,9 @@ export function ArticlePageContent({
     <article ref={rootRef} className="article-page">
       <header className="article-page__header">
         <p className="article-page__meta">
-          {formatArticleDateRu(item.publishedAt)} · {formatReadingTimeRu(item.readingTime)}
+          {[formatArticleDateRu(item.publishedAt), formatReadingTimeRu(item.readingTime)]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
         <h1 className="article-page__title">{item.title}</h1>
         {item.excerpt ? <p className="article-page__lead">{item.excerpt}</p> : null}
@@ -85,14 +87,28 @@ export function ArticlePageContent({
       {item.cover ? (
         <div className="article-page__cover">
           <div className="article-page__cover-frame">
-            <Image
-              src={item.cover}
-              alt={item.coverAlt || item.title}
-              fill
-              priority
-              sizes="(max-width: 960px) 100vw, 768px"
-              className="article-page__cover-img"
-            />
+            {item.gallery?.[0]?.kind === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(item.cover) ? (
+              <video
+                className="article-page__cover-img"
+                src={item.cover}
+                muted
+                playsInline
+                autoPlay
+                loop
+                preload="metadata"
+                aria-label={item.coverAlt || item.title}
+              />
+            ) : (
+              // Native img: keep uploaded aspect ratio (next/Image fill forces a box).
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className="article-page__cover-img"
+                src={item.cover}
+                alt={item.coverAlt || item.title}
+                decoding="async"
+                fetchPriority="high"
+              />
+            )}
             <span
               ref={curtainLeftRef}
               className="article-page__curtain article-page__curtain--left"
@@ -111,17 +127,19 @@ export function ArticlePageContent({
         <ArticleBody sections={item.sections} description={item.description} />
       </div>
 
-      <div className="article-page__author">
-        {item.author.photo ? (
-          <span className="article-page__author-avatar">
-            <Image src={item.author.photo} alt="" width={72} height={72} />
-          </span>
-        ) : null}
-        <div>
-          <p className="article-page__author-name">{item.author.name}</p>
-          {item.author.role ? <p className="article-page__author-role">{item.author.role}</p> : null}
+      {item.author.name ? (
+        <div className="article-page__author">
+          {item.author.photo ? (
+            <span className="article-page__author-avatar">
+              <Image src={item.author.photo} alt="" width={72} height={72} />
+            </span>
+          ) : null}
+          <div>
+            <p className="article-page__author-name">{item.author.name}</p>
+            {item.author.role ? <p className="article-page__author-role">{item.author.role}</p> : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {related.length > 0 ? (
         <div className="article-page__related">

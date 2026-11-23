@@ -112,16 +112,17 @@ export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleCo
     excerpt: doc.excerpt ?? '',
     cover: coverFromGallery || resolveMediaUrl(coverMedia) || '',
     coverAlt: gallery[0]?.alt || resolveMediaAlt(coverMedia, doc.title),
-    author:
-      typeof authorRef === 'number'
-        ? { name: 'Автор', role: '' }
+    author: !authorRef
+      ? { name: '', role: '' }
+      : typeof authorRef === 'number'
+        ? { name: '', role: '' }
         : {
             name: authorRef.name,
             role: authorRef.role ?? '',
             photo: resolveMediaUrl(authorRef.photo as number | Media) || undefined,
           },
     publishedAt: doc.publishedAt,
-    readingTime: doc.readingTime ?? 3,
+    readingTime: doc.readingTime ?? undefined,
     featured: doc.featured ?? false,
     status,
     description,

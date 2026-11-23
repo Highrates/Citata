@@ -1,4 +1,5 @@
-export function formatReadingTimeRu(minutes: number) {
+export function formatReadingTimeRu(minutes?: number | null) {
+  if (minutes == null || !Number.isFinite(minutes) || minutes <= 0) return ''
   const n = Math.max(1, Math.round(minutes))
   const mod10 = n % 10
   const mod100 = n % 100

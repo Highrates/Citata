@@ -49,7 +49,7 @@ export type Article = {
   coverAlt: string
   author: { name: string; role: string; photo?: string }
   publishedAt: string
-  readingTime: number
+  readingTime?: number
   featured?: boolean
   status?: ArticleStatus
   /** HTML из RichBlock */

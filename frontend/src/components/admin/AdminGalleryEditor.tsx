@@ -20,10 +20,25 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import Image from 'next/image'
-import { useMemo, useState, type DragEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type DragEvent } from 'react'
 import type { GalleryItem } from '@/content/types'
 
 export type GalleryFrame = GalleryItem & { id: string }
+
+/** Safari/Chrome often need a media fragment to paint the first frame. */
+function videoPreviewSrc(src: string) {
+  if (!src || src.includes('#t=')) return src
+  return `${src}#t=0.001`
+}
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function getFocusable(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true',
+  )
+}
 
 type AdminGalleryEditorProps = {
   frames: GalleryFrame[]
@@ -40,17 +55,169 @@ type AdminGalleryEditorProps = {
   addLabel?: string
 }
 
+function GalleryLightbox({
+  frames,
+  index,
+  onClose,
+  onIndexChange,
+}: {
+  frames: GalleryFrame[]
+  index: number
+  onClose: () => void
+  onIndexChange: (index: number) => void
+}) {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previouslyFocused = useRef<HTMLElement | null>(null)
+  const frame = frames[index]
+  const hasPrev = index > 0
+  const hasNext = index < frames.length - 1
+
+  useEffect(() => {
+    previouslyFocused.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+
+    const dialog = dialogRef.current
+    const focusables = dialog ? getFocusable(dialog) : []
+    ;(focusables[0] ?? dialog)?.focus()
+
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+        return
+      }
+      if (e.key === 'ArrowLeft' && hasPrev) {
+        e.preventDefault()
+        onIndexChange(index - 1)
+        return
+      }
+      if (e.key === 'ArrowRight' && hasNext) {
+        e.preventDefault()
+        onIndexChange(index + 1)
+        return
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return
+
+      const nodes = getFocusable(dialogRef.current)
+      if (nodes.length === 0) {
+        e.preventDefault()
+        dialogRef.current.focus()
+        return
+      }
+      const first = nodes[0]
+      const last = nodes[nodes.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+      previouslyFocused.current?.focus?.()
+    }
+  }, [hasNext, hasPrev, index, onClose, onIndexChange])
+
+  if (!frame) return null
+
+  return (
+    <div
+      className="case-gallery-lightbox"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        className="case-gallery-lightbox__stage"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p id={titleId} className="sr-only">
+          {frame.alt || (frame.kind === 'video' ? 'Видео' : 'Изображение')}
+          {frames.length > 1 ? ` (${index + 1} из ${frames.length})` : ''}
+        </p>
+
+        <button
+          type="button"
+          className="case-gallery-lightbox__close"
+          aria-label="Закрыть"
+          onClick={onClose}
+        >
+          ×
+        </button>
+
+        {hasPrev ? (
+          <button
+            type="button"
+            className="case-gallery-lightbox__nav case-gallery-lightbox__nav--prev"
+            aria-label="Предыдущее"
+            onClick={() => onIndexChange(index - 1)}
+          >
+            ‹
+          </button>
+        ) : null}
+
+        {hasNext ? (
+          <button
+            type="button"
+            className="case-gallery-lightbox__nav case-gallery-lightbox__nav--next"
+            aria-label="Следующее"
+            onClick={() => onIndexChange(index + 1)}
+          >
+            ›
+          </button>
+        ) : null}
+
+        {frame.kind === 'video' ? (
+          <video
+            className="case-gallery-lightbox__video"
+            src={frame.src}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- fullscreen lightbox needs unconstrained sizing
+          <img
+            className="case-gallery-lightbox__img"
+            src={frame.src}
+            alt={frame.alt || ''}
+          />
+        )}
+
+        {frame.alt ? <p className="case-gallery-lightbox__caption">{frame.alt}</p> : null}
+      </div>
+    </div>
+  )
+}
+
 function SortableGalleryCard({
   frame,
   index,
   onRemove,
   onAltChange,
+  onOpen,
   coverBadge = 'Обложка',
 }: {
   frame: GalleryFrame
   index: number
   onRemove: () => void
   onAltChange: (alt: string) => void
+  onOpen: () => void
   coverBadge?: string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -76,16 +243,33 @@ function SortableGalleryCard({
           ⋮⋮
         </button>
         {frame.kind === 'video' ? (
-          <video src={frame.src} muted playsInline preload="metadata" />
+          <video
+            className="case-gallery-card__video"
+            src={videoPreviewSrc(frame.src)}
+            muted
+            playsInline
+            preload="metadata"
+            aria-hidden
+          />
         ) : (
           <Image
             src={frame.src}
-            alt={frame.alt || ''}
+            alt=""
             fill
             sizes="160px"
             className="case-gallery-card__img"
           />
         )}
+        <button
+          type="button"
+          className="case-gallery-card__open"
+          aria-label={
+            frame.kind === 'video'
+              ? `Открыть видео${frame.alt ? `: ${frame.alt}` : ''}`
+              : `Открыть изображение${frame.alt ? `: ${frame.alt}` : ''}`
+          }
+          onClick={onOpen}
+        />
         {index === 0 ? <span className="case-gallery-card__badge">{coverBadge}</span> : null}
         {frame.kind === 'video' ? <span className="case-gallery-card__kind">Видео</span> : null}
         <button
@@ -124,7 +308,14 @@ function GalleryCardPreview({
     <div className="case-gallery-card case-gallery-card--overlay">
       <div className="case-gallery-card__media">
         {frame.kind === 'video' ? (
-          <video src={frame.src} muted playsInline preload="metadata" />
+          <video
+            className="case-gallery-card__video"
+            src={videoPreviewSrc(frame.src)}
+            muted
+            playsInline
+            preload="metadata"
+            aria-label={frame.alt || 'Видео'}
+          />
         ) : (
           <Image
             src={frame.src}
@@ -192,6 +383,7 @@ export function AdminGalleryEditor({
   addLabel = 'Добавить фото / видео',
 }: AdminGalleryEditorProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -276,6 +468,7 @@ export function AdminGalleryEditor({
                     frame={frame}
                     index={index}
                     coverBadge={coverBadge}
+                    onOpen={() => setLightboxIndex(index)}
                     onRemove={() => {
                       const label = index === 0 ? coverBadge.toLowerCase() : 'этот кадр'
                       if (!window.confirm(`Удалить ${label} из галереи?`)) return
@@ -311,6 +504,15 @@ export function AdminGalleryEditor({
           />
         </>
       )}
+
+      {lightboxIndex != null && frames[lightboxIndex] ? (
+        <GalleryLightbox
+          frames={frames}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onIndexChange={setLightboxIndex}
+        />
+      ) : null}
     </section>
   )
 }

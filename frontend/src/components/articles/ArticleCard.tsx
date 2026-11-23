@@ -29,7 +29,12 @@ export function ArticleCard({ item, showAuthor = true }: ArticleCardProps) {
         ) : null}
         <h3 className="article-card__title">{item.title}</h3>
         <p className="article-card__meta">
-          {formatDateRu(item.publishedAt)} · {item.readingTime} мин
+          {[
+            formatDateRu(item.publishedAt),
+            item.readingTime != null ? `${item.readingTime} мин` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
       </div>
     </Link>

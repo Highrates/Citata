@@ -110,17 +110,30 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
             {filtered.map((item) => {
               const status = item.status ?? 'draft'
               const inactive = status !== 'published'
+              const videoCover =
+                item.gallery?.[0]?.kind === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(item.cover)
               return (
                 <tr key={item.slug} className={inactive ? 'admin-table-row--inactive' : undefined}>
                   <td>
                     {item.cover ? (
-                      <Image
-                        src={item.cover}
-                        alt=""
-                        width={46}
-                        height={46}
-                        className="admin-table-thumb"
-                      />
+                      videoCover ? (
+                        <video
+                          src={`${item.cover}${item.cover.includes('#t=') ? '' : '#t=0.001'}`}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="admin-table-thumb admin-table-thumb--video"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Image
+                          src={item.cover}
+                          alt=""
+                          width={46}
+                          height={46}
+                          className="admin-table-thumb"
+                        />
+                      )
                     ) : (
                       <span className="admin-table-thumb admin-table-thumb--empty" />
                     )}
@@ -130,10 +143,16 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
                       {item.title}
                     </Link>
                     <div className="admin-table-meta">
-                      {item.readingTime} мин
-                      {item.excerpt
-                        ? ` · ${item.excerpt.length > 64 ? `${item.excerpt.slice(0, 64)}…` : item.excerpt}`
-                        : ''}
+                      {[
+                        item.readingTime != null ? `${item.readingTime} мин` : null,
+                        item.excerpt
+                          ? item.excerpt.length > 64
+                            ? `${item.excerpt.slice(0, 64)}…`
+                            : item.excerpt
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
                   </td>
                   <td>
@@ -150,7 +169,7 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
                       </span>
                     )}
                   </td>
-                  <td>{item.author.name}</td>
+                  <td>{item.author.name || '—'}</td>
                   <td>{formatDateRu(item.publishedAt)}</td>
                   <td className="admin-table-actions">
                     <AdminEditLink
