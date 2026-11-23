@@ -708,6 +708,13 @@ img {
   transition: transform 0.6s ease;
 }
 
+.case-card__media > video.case-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .case-card:hover .case-card__image {
   transform: scale(1.03);
 }
@@ -1047,6 +1054,13 @@ img {
 .article-card__image {
   object-fit: cover;
   transition: transform 0.6s ease;
+}
+
+.article-card__media > video.article-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .article-card:hover .article-card__image {
@@ -1458,10 +1472,6 @@ img {
 }
 
 /* Gallery — compact cards */
-.case-page__gallery {
-  margin: 8px 0 72px;
-}
-
 .case-page__section-label {
   margin: 0 0 20px;
   color: var(--muted);
@@ -1471,7 +1481,21 @@ img {
   text-transform: uppercase;
 }
 
-.case-page__gallery-grid {
+/* Public gallery + lightbox (case / article pages) */
+.page-gallery {
+  margin: 8px 0 72px;
+}
+
+.page-gallery__label {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-regular);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-gallery__grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
@@ -1480,23 +1504,120 @@ img {
   padding: 0;
 }
 
-.case-page__gallery-card {
+.page-gallery__card {
   margin: 0;
   overflow: hidden;
   background: color-mix(in srgb, var(--bg) 70%, #cfc9bc);
   aspect-ratio: 4 / 3;
 }
 
-.case-page__gallery-image,
-.case-page__gallery-video {
+.page-gallery__trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.page-gallery__media {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.case-page__gallery-video {
+.page-gallery__media--video {
   background: #000;
+  pointer-events: none;
+}
+
+.media-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(12, 12, 12, 0.88);
+}
+
+.media-lightbox__stage {
+  position: relative;
+  max-width: min(1120px, 100%);
+  max-height: 100%;
+  outline: none;
+}
+
+.media-lightbox__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.media-lightbox__close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.media-lightbox__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.media-lightbox__nav:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.media-lightbox__nav--prev {
+  left: -8px;
+}
+
+.media-lightbox__nav--next {
+  right: -8px;
+}
+
+.media-lightbox__img,
+.media-lightbox__video {
+  display: block;
+  max-width: 100%;
+  max-height: min(82vh, 900px);
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.media-lightbox__video {
+  width: min(100%, 960px);
+  background: #000;
+}
+
+.media-lightbox__caption {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 /* Related cases */
@@ -1589,7 +1710,7 @@ img {
     margin-top: 2.25rem;
   }
 
-  .case-page__gallery-grid {
+  .page-gallery__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
   }
@@ -1754,20 +1875,37 @@ img {
     font-size: 0.75rem;
   }
 
-  .case-page__gallery {
+  .page-gallery {
     margin: 4px -16px 48px;
     width: calc(100% + 32px);
     padding-inline: 16px;
     box-sizing: border-box;
   }
 
-  .case-page__gallery-grid {
+  .page-gallery__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .case-page__gallery-card {
+  .page-gallery__card {
     aspect-ratio: 1;
+  }
+
+  .media-lightbox {
+    padding: 12px;
+  }
+
+  .media-lightbox__nav--prev {
+    left: 4px;
+  }
+
+  .media-lightbox__nav--next {
+    right: 4px;
+  }
+
+  .media-lightbox__close {
+    top: 4px;
+    right: 4px;
   }
 
   .case-page__related {
@@ -1821,7 +1959,7 @@ img {
     width: 96px;
   }
 
-  .case-page__gallery-grid {
+  .page-gallery__grid {
     gap: 6px;
   }
 }

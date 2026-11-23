@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Article } from '@/content/types'
 import { formatDateRu } from '@/lib/content'
+import { isVideoMedia } from '@/lib/media-kind'
 
 type ArticleCardProps = {
   item: Article
@@ -9,16 +10,31 @@ type ArticleCardProps = {
 }
 
 export function ArticleCard({ item, showAuthor = true }: ArticleCardProps) {
+  const video = isVideoMedia(item.cover, item.gallery?.[0]?.kind)
+
   return (
     <Link href={`/articles/${item.slug}`} className="article-card">
       <div className="article-card__media">
-        <Image
-          src={item.cover}
-          alt={item.coverAlt}
-          fill
-          sizes="(max-width: 768px) 100vw, 33vw"
-          className="article-card__image"
-        />
+        {video ? (
+          <video
+            className="article-card__image"
+            src={item.cover}
+            muted
+            loop
+            playsInline
+            autoPlay
+            preload="metadata"
+            aria-label={item.coverAlt || item.title}
+          />
+        ) : (
+          <Image
+            src={item.cover}
+            alt={item.coverAlt}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="article-card__image"
+          />
+        )}
       </div>
       <div className="article-card__body">
         {showAuthor ? (

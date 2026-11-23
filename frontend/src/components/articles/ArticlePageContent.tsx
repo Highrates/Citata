@@ -6,8 +6,10 @@ import Link from 'next/link'
 import gsap from 'gsap'
 import { ArticleBody } from '@/components/articles/ArticleBody'
 import { BlogRow } from '@/components/articles/BlogRow'
+import { PageGallery } from '@/components/media/PageGallery'
 import { ConsultationCta } from '@/components/ui/ConsultationCta'
 import type { Article } from '@/content/types'
+import { isVideoMedia } from '@/lib/media-kind'
 import { formatArticleDateRu, formatReadingTimeRu } from '@/lib/reading-time'
 
 type ArticlePageContentProps = {
@@ -87,7 +89,7 @@ export function ArticlePageContent({
       {item.cover ? (
         <div className="article-page__cover">
           <div className="article-page__cover-frame">
-            {item.gallery?.[0]?.kind === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(item.cover) ? (
+            {isVideoMedia(item.cover, item.gallery?.[0]?.kind) ? (
               <video
                 className="article-page__cover-img"
                 src={item.cover}
@@ -126,6 +128,10 @@ export function ArticlePageContent({
       <div className="article-page__body">
         <ArticleBody sections={item.sections} description={item.description} />
       </div>
+
+      {item.gallery && item.gallery.length > 1 ? (
+        <PageGallery frames={item.gallery.slice(1)} label="Галерея" />
+      ) : null}
 
       {item.author.name ? (
         <div className="article-page__author">

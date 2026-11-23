@@ -5,9 +5,11 @@ import { notFound } from 'next/navigation'
 import { CaseBlocks } from '@/components/cases/CaseBlocks'
 import { CaseCard } from '@/components/cases/CaseCard'
 import { FadeIn } from '@/components/animations/FadeIn'
+import { PageGallery } from '@/components/media/PageGallery'
 import { cases as fixtureCases } from '@/content/cases'
 import { getCases } from '@/lib/content'
 import { fetchCaseBySlug, fetchCases } from '@/lib/content-cases'
+import { isVideoMedia } from '@/lib/media-kind'
 import { isCasePreviewAuthorized } from '@/lib/preview'
 import { ensureVideoAutoplay } from '@/lib/ensure-video-autoplay'
 import { absoluteUrl, breadcrumbJsonLd } from '@/lib/seo'
@@ -85,8 +87,7 @@ export default async function CasePage({ params, searchParams }: Props) {
   const fixture = fixtureCases.find((c) => c.slug === slug)
   const gallery =
     item.gallery && item.gallery.length > 1 ? item.gallery : fixture?.gallery ?? item.gallery
-  const coverKind =
-    gallery?.[0]?.kind ?? (/\.(mp4|webm|mov)(\?|$)/i.test(item.cover) ? 'video' : 'image')
+  const coverKind = isVideoMedia(item.cover, gallery?.[0]?.kind) ? 'video' : 'image'
   const galleryRest = (gallery ?? []).slice(1)
   const status = item.status ?? 'published'
   const fixtureBlocks =
@@ -163,38 +164,7 @@ export default async function CasePage({ params, searchParams }: Props) {
           </div>
         ) : null}
 
-        {galleryRest.length > 0 ? (
-          <section className="case-page__gallery" aria-label="Галерея кейса">
-            <h2 className="case-page__section-label">Галерея</h2>
-            <ul className="case-page__gallery-grid">
-              {galleryRest.map((frame) => (
-                <li key={frame.src} className="case-page__gallery-card">
-                  {frame.kind === 'video' ? (
-                    <video
-                      className="case-page__gallery-video"
-                      src={frame.src}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      controls
-                      preload="auto"
-                    />
-                  ) : (
-                    <Image
-                      src={frame.src}
-                      alt={frame.alt}
-                      width={640}
-                      height={480}
-                      className="case-page__gallery-image"
-                      sizes="(max-width: 720px) 50vw, (max-width: 960px) 33vw, 25vw"
-                    />
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        {galleryRest.length > 0 ? <PageGallery frames={galleryRest} label="Галерея" /> : null}
 
         {related.length > 0 ? (
           <section className="case-page__related" aria-labelledby="case-related-heading">
