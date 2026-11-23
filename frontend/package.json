@@ -9,7 +9,7 @@
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
-    "test": "node --import tsx --test src/lib/map-case.test.ts src/lib/map-article.test.ts src/lib/map-site.test.ts src/lib/map-press.test.ts src/lib/admin/session-token.test.ts src/lib/preview.test.ts src/lib/api/payload-client.test.ts src/lib/admin/payload-helpers.ensure.test.ts src/lib/admin/upload-limits.test.ts src/lib/admin/payload-where.test.ts src/lib/admin/paginate.test.ts src/lib/admin/flash.test.ts src/lib/admin/sortable.test.ts src/components/admin/galleryHelpers.test.ts src/lib/richBlockI18n.test.ts"
+    "test": "node --import tsx --test src/lib/map-case.test.ts src/lib/map-article.test.ts src/lib/map-site.test.ts src/lib/map-press.test.ts src/lib/admin/session-token.test.ts src/lib/preview.test.ts src/lib/api/payload-client.test.ts src/lib/admin/payload-helpers.ensure.test.ts src/lib/admin/upload-limits.test.ts src/lib/admin/payload-where.test.ts src/lib/admin/paginate.test.ts src/lib/admin/flash.test.ts src/lib/admin/sortable.test.ts src/lib/admin/home-order.test.ts src/components/admin/galleryHelpers.test.ts src/lib/richBlockI18n.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -24,11 +24,18 @@ import {
 } from '@/components/admin/galleryHelpers'
 import { useAdminFormDirty } from '@/components/admin/useAdminFormDirty'
 import { useGalleryUpload } from '@/components/admin/useGalleryUpload'
+import { useHomeOrderCheck } from '@/components/admin/useHomeOrderCheck'
 import { useSlugAvailability } from '@/components/admin/useSlugAvailability'
 import { RichBlock } from '@/components/RichBlock/RichBlock'
 import type { Case, CaseStatus } from '@/content/types'
 import type { AdminDataSource } from '@/lib/admin/data'
-import { checkCaseSlugAction, deleteCaseAction, saveCaseAction } from '@/lib/admin/content-actions'
+import {
+  checkCaseSlugAction,
+  checkHomeOrderAction,
+  deleteCaseAction,
+  saveCaseAction,
+  suggestHomeOrderAction,
+} from '@/lib/admin/content-actions'
 import { uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
 import { slugify } from '@/lib/slugify'
 
@@ -52,6 +59,7 @@ type FormSnapshot = {
   seoDescription: string
   status: CaseStatus
   featured: boolean
+  homeOrder: string
   gallery: GalleryFrame[]
 }
 
@@ -67,6 +75,7 @@ function snapshotFrom(item: Case | undefined): FormSnapshot {
     seoDescription: item?.seo?.description ?? '',
     status: item?.status ?? 'draft',
     featured: item?.featured ?? false,
+    homeOrder: item?.homeOrder != null ? String(item.homeOrder) : '',
     gallery: initialCoverGallery({
       gallery: item?.gallery,
       cover: item?.cover,
@@ -89,6 +98,7 @@ function applySnapshot(
     setSeoDescription: (v: string) => void
     setStatus: (v: CaseStatus) => void
     setFeatured: (v: boolean) => void
+    setHomeOrder: (v: string) => void
     setGallery: (v: GalleryFrame[]) => void
   },
 ) {
@@ -102,6 +112,7 @@ function applySnapshot(
   setters.setSeoDescription(next.seoDescription)
   setters.setStatus(next.status)
   setters.setFeatured(next.featured)
+  setters.setHomeOrder(next.homeOrder)
   setters.setGallery(next.gallery.map((g) => ({ ...g })))
 }
 
@@ -130,6 +141,7 @@ export function CaseEditForm({
   const [seoDescription, setSeoDescription] = useState(baselineRef.current.seoDescription)
   const [status, setStatus] = useState<CaseStatus>(baselineRef.current.status)
   const [featured, setFeatured] = useState(baselineRef.current.featured)
+  const [homeOrder, setHomeOrder] = useState(baselineRef.current.homeOrder)
   const [gallery, setGallery] = useState<GalleryFrame[]>(() =>
     baselineRef.current.gallery.map((g) => ({ ...g })),
   )
@@ -159,6 +171,33 @@ export function CaseEditForm({
     check: checkCaseSlugAction,
   })
 
+  const {
+    checking: homeOrderChecking,
+    warning: homeOrderWarning,
+    taken: homeOrderTaken,
+  } = useHomeOrderCheck({
+    enabled: featured,
+    orderRaw: homeOrder,
+    kind: 'case',
+    excludeSlug,
+    check: checkHomeOrderAction,
+  })
+
+  const onFeaturedChange = useCallback(
+    (next: boolean) => {
+      setFeatured(next)
+      if (!next) {
+        setHomeOrder('')
+        return
+      }
+      if (homeOrder.trim()) return
+      void suggestHomeOrderAction().then((suggested) => {
+        setHomeOrder(String(suggested))
+      })
+    },
+    [homeOrder],
+  )
+
   useEffect(() => {
     const next = snapshotFrom(item)
     baselineRef.current = next
@@ -173,6 +212,7 @@ export function CaseEditForm({
       setSeoDescription,
       setStatus,
       setFeatured,
+      setHomeOrder,
       setGallery,
     })
     setSlugTouched(!isNew)
@@ -199,6 +239,7 @@ export function CaseEditForm({
       seoDescription,
       status,
       featured,
+      homeOrder,
       gallery,
     }),
     [
@@ -212,6 +253,7 @@ export function CaseEditForm({
       seoDescription,
       status,
       featured,
+      homeOrder,
       gallery,
     ],
   )
@@ -259,6 +301,18 @@ export function CaseEditForm({
       setFormError(
         slugCheck === 'taken' ? 'Slug уже занят — выберите другой' : 'Некорректный slug',
       )
+      blockLeave()
+      return
+    }
+    if (featured && !homeOrder.trim()) {
+      e.preventDefault()
+      setFormError('Укажите порядок на главной')
+      blockLeave()
+      return
+    }
+    if (featured && homeOrderTaken && homeOrderWarning) {
+      e.preventDefault()
+      setFormError(homeOrderWarning)
       blockLeave()
       return
     }
@@ -470,13 +524,22 @@ export function CaseEditForm({
           <AdminPublishAside
             status={status}
             featured={featured}
+            homeOrder={homeOrder}
+            homeOrderWarning={homeOrderWarning}
+            homeOrderChecking={homeOrderChecking}
             dirty={dirty}
             galleryEmpty={gallery.length === 0}
-            saveDisabled={uploadBusy || isNavigatingAway || slugCheck === 'taken'}
+            saveDisabled={
+              uploadBusy ||
+              isNavigatingAway ||
+              slugCheck === 'taken' ||
+              (featured && homeOrderTaken)
+            }
             showDelete={!isNew}
             canPreview={Boolean(previewHref)}
             onStatusChange={setStatus}
-            onFeaturedChange={setFeatured}
+            onFeaturedChange={onFeaturedChange}
+            onHomeOrderChange={setHomeOrder}
             onCancel={() => navigateAway('/admin/cases')}
             onDelete={() => setShowDelete(true)}
           />

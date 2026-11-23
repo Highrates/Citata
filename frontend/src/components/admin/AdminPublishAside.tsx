@@ -8,6 +8,9 @@ type StatusOption = { value: CaseStatus; label: string }
 type AdminPublishAsideProps = {
   status: CaseStatus
   featured: boolean
+  homeOrder: string
+  homeOrderWarning?: string | null
+  homeOrderChecking?: boolean
   dirty: boolean
   galleryEmpty: boolean
   saveDisabled?: boolean
@@ -19,6 +22,7 @@ type AdminPublishAsideProps = {
   previewHint?: string
   onStatusChange: (status: CaseStatus) => void
   onFeaturedChange: (featured: boolean) => void
+  onHomeOrderChange: (value: string) => void
   onCancel: () => void
   onDelete: () => void
 }
@@ -32,6 +36,9 @@ const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
 export function AdminPublishAside({
   status,
   featured,
+  homeOrder,
+  homeOrderWarning,
+  homeOrderChecking,
   dirty,
   galleryEmpty,
   saveDisabled,
@@ -43,6 +50,7 @@ export function AdminPublishAside({
   previewHint,
   onStatusChange,
   onFeaturedChange,
+  onHomeOrderChange,
   onCancel,
   onDelete,
 }: AdminPublishAsideProps) {
@@ -83,6 +91,36 @@ export function AdminPublishAside({
           />
           <span>{featuredLabel}</span>
         </label>
+
+        {featured ? (
+          <div className="admin-field">
+            <label className="admin-field-label" htmlFor="homeOrder">
+              Порядок на главной
+            </label>
+            <input
+              id="homeOrder"
+              name="homeOrder"
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              className="admin-control admin-control--input"
+              value={homeOrder}
+              onChange={(e) => onHomeOrderChange(e.target.value)}
+              aria-invalid={Boolean(homeOrderWarning)}
+              required
+            />
+            {homeOrderChecking ? (
+              <p className="admin-muted">Проверка позиции…</p>
+            ) : homeOrderWarning ? (
+              <p className="admin-field-hint admin-field-hint--warn" role="status">
+                {homeOrderWarning}
+              </p>
+            ) : (
+              <p className="admin-muted">Общий порядок с кейсами и статьями (1 = первый)</p>
+            )}
+          </div>
+        ) : null}
 
         {status !== 'published' ? <p className="admin-muted">{unpublishedHint}</p> : null}
 

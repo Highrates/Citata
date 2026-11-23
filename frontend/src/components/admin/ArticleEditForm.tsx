@@ -24,14 +24,17 @@ import {
 } from '@/components/admin/galleryHelpers'
 import { useAdminFormDirty } from '@/components/admin/useAdminFormDirty'
 import { useGalleryUpload } from '@/components/admin/useGalleryUpload'
+import { useHomeOrderCheck } from '@/components/admin/useHomeOrderCheck'
 import { useSlugAvailability } from '@/components/admin/useSlugAvailability'
 import { RichBlock } from '@/components/RichBlock/RichBlock'
 import type { Article, ArticleStatus, CaseStatus } from '@/content/types'
 import type { AdminDataSource } from '@/lib/admin/data'
 import {
   checkArticleSlugAction,
+  checkHomeOrderAction,
   deleteArticleAction,
   saveArticleAction,
+  suggestHomeOrderAction,
 } from '@/lib/admin/content-actions'
 import { uploadAdminRichMedia } from '@/lib/admin/uploadMedia'
 import { sectionsToHtml } from '@/lib/map-article'
@@ -58,6 +61,7 @@ type FormSnapshot = {
   seoDescription: string
   status: ArticleStatus
   featured: boolean
+  homeOrder: string
   gallery: GalleryFrame[]
 }
 
@@ -86,6 +90,7 @@ function snapshotFrom(item: Article | undefined): FormSnapshot {
     seoDescription: item?.seo?.description ?? '',
     status: item?.status ?? 'draft',
     featured: item?.featured ?? false,
+    homeOrder: item?.homeOrder != null ? String(item.homeOrder) : '',
     gallery: initialCoverGallery({
       gallery: item?.gallery,
       cover: item?.cover,
@@ -110,6 +115,7 @@ function applySnapshot(
     setSeoDescription: (v: string) => void
     setStatus: (v: ArticleStatus) => void
     setFeatured: (v: boolean) => void
+    setHomeOrder: (v: string) => void
     setGallery: (v: GalleryFrame[]) => void
   },
 ) {
@@ -125,6 +131,7 @@ function applySnapshot(
   setters.setSeoDescription(next.seoDescription)
   setters.setStatus(next.status)
   setters.setFeatured(next.featured)
+  setters.setHomeOrder(next.homeOrder)
   setters.setGallery(next.gallery.map((g) => ({ ...g })))
 }
 
@@ -154,6 +161,7 @@ export function ArticleEditForm({
   const [seoDescription, setSeoDescription] = useState(baselineRef.current.seoDescription)
   const [status, setStatus] = useState<ArticleStatus>(baselineRef.current.status)
   const [featured, setFeatured] = useState(baselineRef.current.featured)
+  const [homeOrder, setHomeOrder] = useState(baselineRef.current.homeOrder)
   const [gallery, setGallery] = useState<GalleryFrame[]>(() =>
     baselineRef.current.gallery.map((g) => ({ ...g })),
   )
@@ -183,6 +191,33 @@ export function ArticleEditForm({
     check: checkArticleSlugAction,
   })
 
+  const {
+    checking: homeOrderChecking,
+    warning: homeOrderWarning,
+    taken: homeOrderTaken,
+  } = useHomeOrderCheck({
+    enabled: featured,
+    orderRaw: homeOrder,
+    kind: 'article',
+    excludeSlug,
+    check: checkHomeOrderAction,
+  })
+
+  const onFeaturedChange = useCallback(
+    (next: boolean) => {
+      setFeatured(next)
+      if (!next) {
+        setHomeOrder('')
+        return
+      }
+      if (homeOrder.trim()) return
+      void suggestHomeOrderAction().then((suggested) => {
+        setHomeOrder(String(suggested))
+      })
+    },
+    [homeOrder],
+  )
+
   useEffect(() => {
     const next = snapshotFrom(item)
     baselineRef.current = next
@@ -199,6 +234,7 @@ export function ArticleEditForm({
       setSeoDescription,
       setStatus,
       setFeatured,
+      setHomeOrder,
       setGallery,
     })
     setSlugTouched(!isNew)
@@ -226,6 +262,7 @@ export function ArticleEditForm({
       seoDescription,
       status,
       featured,
+      homeOrder,
       gallery,
     }),
     [
@@ -241,6 +278,7 @@ export function ArticleEditForm({
       seoDescription,
       status,
       featured,
+      homeOrder,
       gallery,
     ],
   )
@@ -287,6 +325,18 @@ export function ArticleEditForm({
       setFormError(
         slugCheck === 'taken' ? 'Slug уже занят — выберите другой' : 'Некорректный slug',
       )
+      blockLeave()
+      return
+    }
+    if (featured && !homeOrder.trim()) {
+      e.preventDefault()
+      setFormError('Укажите порядок на главной')
+      blockLeave()
+      return
+    }
+    if (featured && homeOrderTaken && homeOrderWarning) {
+      e.preventDefault()
+      setFormError(homeOrderWarning)
       blockLeave()
       return
     }
@@ -522,9 +572,17 @@ export function ArticleEditForm({
           <AdminPublishAside
             status={status}
             featured={featured}
+            homeOrder={homeOrder}
+            homeOrderWarning={homeOrderWarning}
+            homeOrderChecking={homeOrderChecking}
             dirty={dirty}
             galleryEmpty={gallery.length === 0}
-            saveDisabled={uploadBusy || isNavigatingAway || slugCheck === 'taken'}
+            saveDisabled={
+              uploadBusy ||
+              isNavigatingAway ||
+              slugCheck === 'taken' ||
+              (featured && homeOrderTaken)
+            }
             showDelete={!isNew}
             canPreview={Boolean(previewHref)}
             statusOptions={ARTICLE_STATUS_OPTIONS}
@@ -532,7 +590,8 @@ export function ArticleEditForm({
             featuredLabel="Выводить на главную"
             previewHint="Опубликуйте статью, чтобы открыть её на сайте"
             onStatusChange={(next) => setStatus(next === 'published' ? 'published' : 'draft')}
-            onFeaturedChange={setFeatured}
+            onFeaturedChange={onFeaturedChange}
+            onHomeOrderChange={setHomeOrder}
             onCancel={() => navigateAway('/admin/articles')}
             onDelete={() => setShowDelete(true)}
           />

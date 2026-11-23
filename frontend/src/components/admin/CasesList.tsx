@@ -119,8 +119,20 @@ function CaseRowCells({ item }: { item: Case }) {
       </td>
       <td className="admin-table-col-home">
         {item.featured && status === 'published' ? (
-          <span className="admin-home-dot" title="На главной" aria-label="На главной">
-            ●
+          <span
+            className="admin-home-dot"
+            title={
+              item.homeOrder != null
+                ? `На главной · позиция ${item.homeOrder}`
+                : 'На главной'
+            }
+            aria-label={
+              item.homeOrder != null
+                ? `На главной, позиция ${item.homeOrder}`
+                : 'На главной'
+            }
+          >
+            {item.homeOrder != null ? item.homeOrder : '●'}
           </span>
         ) : (
           <span className="admin-home-dot admin-home-dot--off" aria-hidden>
@@ -298,6 +310,10 @@ export function CasesList({ items, source, saved, error }: CasesListProps) {
 
       <AdminSourceBanner source={source} />
       <AdminFlash saved={saved} error={error} />
+      <p className="admin-muted">
+        Drag меняет порядок на /works. Порядок на главной — поле «Порядок на главной» в карточке
+        кейса или статьи.
+      </p>
 
       <div className="admin-toolbar">
         <AdminSearch

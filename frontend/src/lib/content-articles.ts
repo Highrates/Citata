@@ -43,7 +43,14 @@ export async function fetchArticles(): Promise<Article[]> {
 
 export async function fetchFeaturedArticles(): Promise<Article[]> {
   const all = await fetchArticles()
-  return all.filter((a) => a.featured)
+  return all
+    .filter((a) => a.featured)
+    .sort((a, b) => {
+      const ao = a.homeOrder ?? Number.MAX_SAFE_INTEGER
+      const bo = b.homeOrder ?? Number.MAX_SAFE_INTEGER
+      if (ao !== bo) return ao - bo
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    })
 }
 
 export async function fetchArticleBySlug(slug: string): Promise<Article | undefined> {

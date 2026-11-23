@@ -12,43 +12,41 @@ function coverKindFromSrc(cover: string, galleryKind?: 'image' | 'video'): 'imag
   return /\.(mp4|webm|mov)(\?|$)/i.test(cover) ? 'video' : 'image'
 }
 
-function toCaseItems(
-  items: Awaited<ReturnType<typeof fetchCases>>,
-): MediaGridItem[] {
-  return items.map(({ slug, title, cover, coverAlt, summary, gallery }) => ({
-    slug,
-    title,
-    cover,
-    coverAlt,
-    summary,
-    href: `/works/${slug}`,
-    coverKind: coverKindFromSrc(cover, gallery?.[0]?.kind),
-  }))
-}
-
-function toArticleItems(
-  items: Awaited<ReturnType<typeof fetchFeaturedArticles>>,
-): MediaGridItem[] {
-  return items
-    .filter((item) => item.cover)
-    .map(({ slug, title, cover, coverAlt }) => ({
-      slug,
-      title,
-      cover,
-      coverAlt: coverAlt || title,
-      href: `/articles/${slug}`,
-    }))
-}
-
-/** Alternate two pools (call with news first, then cases). */
-function interleave(a: MediaGridItem[], b: MediaGridItem[]): MediaGridItem[] {
-  const out: MediaGridItem[] = []
-  const max = Math.max(a.length, b.length)
-  for (let i = 0; i < max; i++) {
-    if (a[i]) out.push(a[i]!)
-    if (b[i]) out.push(b[i]!)
+function toCaseItem(
+  item: Awaited<ReturnType<typeof fetchCases>>[number],
+): MediaGridItem & { homeOrder: number } {
+  return {
+    slug: item.slug,
+    title: item.title,
+    cover: item.cover,
+    coverAlt: item.coverAlt,
+    summary: item.summary,
+    href: `/works/${item.slug}`,
+    coverKind: coverKindFromSrc(item.cover, item.gallery?.[0]?.kind),
+    homeOrder: item.homeOrder ?? Number.MAX_SAFE_INTEGER,
   }
-  return out
+}
+
+function toArticleItem(
+  item: Awaited<ReturnType<typeof fetchFeaturedArticles>>[number],
+): (MediaGridItem & { homeOrder: number }) | null {
+  if (!item.cover) return null
+  return {
+    slug: item.slug,
+    title: item.title,
+    cover: item.cover,
+    coverAlt: item.coverAlt || item.title,
+    href: `/articles/${item.slug}`,
+    homeOrder: item.homeOrder ?? Number.MAX_SAFE_INTEGER,
+  }
+}
+
+function byHomeOrder(
+  a: { homeOrder: number; title: string },
+  b: { homeOrder: number; title: string },
+) {
+  if (a.homeOrder !== b.homeOrder) return a.homeOrder - b.homeOrder
+  return a.title.localeCompare(b.title, 'ru')
 }
 
 export default async function HomePage() {
@@ -59,12 +57,19 @@ export default async function HomePage() {
     fetchFeaturedArticles(),
   ])
 
-  const casePool = toCaseItems(featuredCases.length ? featuredCases : allCases)
-  // News on home only when «Выводить на главную» is checked in admin
-  const articlePool = toArticleItems(featuredArticles)
-  const mixed = interleave(articlePool, casePool)
-  // Unique items only — no pad-to-28 cycling (duplicate href/cover noise).
-  const gridItems = mixed.length ? mixed : casePool
+  const featuredGrid = [
+    ...featuredCases.map(toCaseItem),
+    ...featuredArticles.map(toArticleItem).filter((item): item is NonNullable<typeof item> => Boolean(item)),
+  ].sort(byHomeOrder)
+
+  // Fallback: no featured homepage slots → published cases by works list order
+  const gridItems: MediaGridItem[] = featuredGrid.length
+    ? featuredGrid.map(({ homeOrder: _homeOrder, ...item }) => item)
+    : allCases.map((item) => {
+        const mapped = toCaseItem(item)
+        const { homeOrder: _homeOrder, ...rest } = mapped
+        return rest
+      })
 
   return (
     <>

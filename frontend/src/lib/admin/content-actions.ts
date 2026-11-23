@@ -29,6 +29,13 @@ import {
   resolveAboutGalleryMediaIds,
 } from '@/lib/map-site'
 import { fetchAllPages } from '@/lib/admin/paginate'
+import {
+  homeOrderConflictMessage,
+  parseHomeOrder,
+  type HomeOrderCheckResult,
+  type HomeOrderKind,
+  type HomeOrderOccupant,
+} from '@/lib/admin/home-order'
 import { sortOrderFromIndex } from '@/lib/admin/sortable'
 import { slugify } from '@/lib/slugify'
 import type {
@@ -102,6 +109,110 @@ async function getExistingCaseSortOrder(
 ) {
   const doc = await payload.findByID<PayloadCase>({ collection: 'cases', id, depth: 0 })
   return doc.sortOrder ?? 0
+}
+
+type HomeOrderDoc = {
+  slug?: string | null
+  title?: string | null
+  homeOrder?: number | null
+}
+
+async function collectHomeOrderOccupants(
+  payload: AdminPayloadClient,
+): Promise<HomeOrderOccupant[]> {
+  const [cases, articles] = await Promise.all([
+    findAllDocs<HomeOrderDoc>(payload, { collection: 'cases', depth: 0 }),
+    findAllDocs<HomeOrderDoc>(payload, { collection: 'articles', depth: 0 }),
+  ])
+
+  const out: HomeOrderOccupant[] = []
+  for (const doc of cases) {
+    if (typeof doc.homeOrder !== 'number' || !Number.isFinite(doc.homeOrder)) continue
+    if (!doc.slug) continue
+    out.push({
+      kind: 'case',
+      slug: doc.slug,
+      title: doc.title || doc.slug,
+      homeOrder: doc.homeOrder,
+    })
+  }
+  for (const doc of articles) {
+    if (typeof doc.homeOrder !== 'number' || !Number.isFinite(doc.homeOrder)) continue
+    if (!doc.slug) continue
+    out.push({
+      kind: 'article',
+      slug: doc.slug,
+      title: doc.title || doc.slug,
+      homeOrder: doc.homeOrder,
+    })
+  }
+  return out
+}
+
+function suggestedNextHomeOrder(occupants: HomeOrderOccupant[]): number {
+  const max = occupants.reduce((m, o) => Math.max(m, o.homeOrder), 0)
+  return max + 1
+}
+
+export async function checkHomeOrderAction(
+  order: number,
+  kind: HomeOrderKind,
+  excludeSlug?: string,
+): Promise<HomeOrderCheckResult> {
+  const normalized = Math.floor(Number(order))
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    return { order: 0, available: false, suggestedNext: 1 }
+  }
+
+  if (!hasPayloadDatabase()) {
+    return { order: normalized, available: true, suggestedNext: normalized }
+  }
+
+  try {
+    const payload = await getAdminPayload()
+    const occupants = await collectHomeOrderOccupants(payload)
+    const conflict = occupants.find(
+      (o) =>
+        o.homeOrder === normalized &&
+        !(excludeSlug && o.kind === kind && o.slug === excludeSlug),
+    )
+    return {
+      order: normalized,
+      available: !conflict,
+      conflict,
+      suggestedNext: suggestedNextHomeOrder(occupants),
+    }
+  } catch {
+    return { order: normalized, available: true, suggestedNext: normalized }
+  }
+}
+
+export async function suggestHomeOrderAction(): Promise<number> {
+  if (!hasPayloadDatabase()) return 1
+  try {
+    const payload = await getAdminPayload()
+    const occupants = await collectHomeOrderOccupants(payload)
+    return suggestedNextHomeOrder(occupants)
+  } catch {
+    return 1
+  }
+}
+
+async function assertHomeOrderAvailable(
+  payload: AdminPayloadClient,
+  order: number,
+  kind: HomeOrderKind,
+  excludeSlug: string | undefined,
+  redirectPath: string,
+) {
+  const occupants = await collectHomeOrderOccupants(payload)
+  const conflict = occupants.find(
+    (o) =>
+      o.homeOrder === order && !(excludeSlug && o.kind === kind && o.slug === excludeSlug),
+  )
+  if (conflict) {
+    redirectWithError(redirectPath, homeOrderConflictMessage(conflict))
+  }
 }
 
 export async function reorderCasesAction(formData: FormData) {
@@ -240,6 +351,16 @@ export async function saveCaseAction(formData: FormData) {
     const seoTitle = formString(formData, 'seoTitle') || undefined
     const seoDescription = formString(formData, 'seoDescription') || undefined
 
+    const wantFeatured = formBool(formData, 'featured')
+    const featured = wantFeatured && status === 'published'
+    const homeOrder = wantFeatured ? parseHomeOrder(formString(formData, 'homeOrder')) : null
+    if (wantFeatured && homeOrder == null) {
+      redirectWithError(basePath, 'Укажите порядок на главной (число ≥ 1)')
+    }
+    if (homeOrder != null) {
+      await assertHomeOrderAvailable(payload, homeOrder, 'case', originalSlug || slug, basePath)
+    }
+
     const caseData = {
       slug,
       title,
@@ -249,7 +370,8 @@ export async function saveCaseAction(formData: FormData) {
       summary: formString(formData, 'summary') || undefined,
       description: formString(formData, 'description') || undefined,
       heroTitle: formString(formData, 'heroTitle') || undefined,
-      featured: formBool(formData, 'featured') && status === 'published',
+      featured,
+      homeOrder,
       status,
       sortOrder,
       gallery,
@@ -267,6 +389,8 @@ export async function saveCaseAction(formData: FormData) {
       cover: coverId,
       gallery: galleryMediaIds.map((media) => ({ media })),
       status,
+      featured,
+      homeOrder,
       description: caseData.description || null,
       meta: {
         title: seoTitle || null,
@@ -420,6 +544,22 @@ export async function saveArticleAction(formData: FormData) {
     const description = formString(formData, 'description') || undefined
     const readingTime = readingTimeRaw ? formNumber(formData, 'readingTime', 0) : null
 
+    const wantFeatured = formBool(formData, 'featured')
+    const featured = wantFeatured && status === 'published'
+    const homeOrder = wantFeatured ? parseHomeOrder(formString(formData, 'homeOrder')) : null
+    if (wantFeatured && homeOrder == null) {
+      redirectWithError(basePath, 'Укажите порядок на главной (число ≥ 1)')
+    }
+    if (homeOrder != null) {
+      await assertHomeOrderAvailable(
+        payload,
+        homeOrder,
+        'article',
+        originalSlug || slug,
+        basePath,
+      )
+    }
+
     const article = {
       slug,
       title,
@@ -429,7 +569,8 @@ export async function saveArticleAction(formData: FormData) {
       author: { name: authorName, role: formString(formData, 'role') },
       publishedAt: new Date(publishedAt).toISOString(),
       readingTime: readingTime ?? undefined,
-      featured: formBool(formData, 'featured') && status === 'published',
+      featured,
+      homeOrder,
       status,
       description,
       gallery,
@@ -450,6 +591,8 @@ export async function saveArticleAction(formData: FormData) {
       readingTime,
       gallery: galleryMediaIds.map((media) => ({ media })),
       status,
+      featured,
+      homeOrder,
       description: description || null,
       sections: [],
       meta: {

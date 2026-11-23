@@ -160,8 +160,20 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
                   </td>
                   <td className="admin-table-col-home">
                     {item.featured && status === 'published' ? (
-                      <span className="admin-home-dot" title="На главной" aria-label="На главной">
-                        ●
+                      <span
+                        className="admin-home-dot"
+                        title={
+                          item.homeOrder != null
+                            ? `На главной · позиция ${item.homeOrder}`
+                            : 'На главной'
+                        }
+                        aria-label={
+                          item.homeOrder != null
+                            ? `На главной, позиция ${item.homeOrder}`
+                            : 'На главной'
+                        }
+                      >
+                        {item.homeOrder != null ? item.homeOrder : '●'}
                       </span>
                     ) : (
                       <span className="admin-home-dot admin-home-dot--off" aria-hidden>

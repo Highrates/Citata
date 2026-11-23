@@ -108,12 +108,23 @@ export const Cases: CollectionConfig = {
       },
     },
     {
+      name: 'homeOrder',
+      type: 'number',
+      label: 'Порядок на главной',
+      admin: {
+        position: 'sidebar',
+        description: 'Общий слот с статьями. Появляется при выводе на главную.',
+        condition: (_, siblingData) => Boolean(siblingData?.featured),
+      },
+    },
+    {
       name: 'sortOrder',
       type: 'number',
       defaultValue: 0,
-      label: 'Порядок',
+      label: 'Порядок в списке работ',
       admin: {
         position: 'sidebar',
+        description: 'Порядок на /works (drag в админке). Не влияет на главную.',
       },
     },
     {

@@ -923,9 +923,14 @@ a.admin-btn:focus {
 }
 
 .admin-home-dot {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
+  font-weight: 600;
   color: #1e6b2f;
 }
 
@@ -1314,6 +1319,10 @@ a.admin-btn:focus {
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--admin-muted, #6b7280);
+}
+
+.admin-field-hint--warn {
+  color: var(--admin-warn, #b45309);
 }
 
 .admin-field-hint--ok {

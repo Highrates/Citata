@@ -188,6 +188,16 @@ export const Articles: CollectionConfig = {
       },
     },
     {
+      name: 'homeOrder',
+      type: 'number',
+      label: 'Порядок на главной',
+      admin: {
+        position: 'sidebar',
+        description: 'Общий слот с кейсами. Появляется при выводе на главную.',
+        condition: (_, siblingData) => Boolean(siblingData?.featured),
+      },
+    },
+    {
       name: 'status',
       type: 'select',
       defaultValue: 'draft',

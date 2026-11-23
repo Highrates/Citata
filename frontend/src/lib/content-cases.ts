@@ -41,10 +41,15 @@ export async function fetchCases(): Promise<Case[]> {
 
 export async function fetchFeaturedCases(): Promise<Case[]> {
   const all = await fetchCases()
-  // Same ascending sortOrder as admin/cases (drag order); only published
+  // Homepage uses shared homeOrder (with articles); sortOrder is for /works only
   return all
     .filter((c) => c.featured && (c.status ?? 'published') === 'published')
-    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .sort((a, b) => {
+      const ao = a.homeOrder ?? Number.MAX_SAFE_INTEGER
+      const bo = b.homeOrder ?? Number.MAX_SAFE_INTEGER
+      if (ao !== bo) return ao - bo
+      return a.title.localeCompare(b.title, 'ru')
+    })
 }
 
 async function fetchPayloadCaseBySlugAnyStatus(slug: string): Promise<Case | undefined> {

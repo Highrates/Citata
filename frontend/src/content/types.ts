@@ -27,7 +27,10 @@ export type Case = {
   description?: string
   heroTitle?: string
   featured?: boolean
+  /** Shared homepage slot with articles (only when featured) */
+  homeOrder?: number | null
   status?: CaseStatus
+  /** Order on /works (admin drag). Not used on home. */
   sortOrder: number
   gallery?: GalleryItem[]
   /** @deprecated legacy fixtures only — Payload uses `description` HTML */
@@ -55,6 +58,8 @@ export type Article = {
   publishedAt: string
   readingTime?: number
   featured?: boolean
+  /** Shared homepage slot with cases (only when featured) */
+  homeOrder?: number | null
   status?: ArticleStatus
   /** HTML из RichBlock */
   description?: string
