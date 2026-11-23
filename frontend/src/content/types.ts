@@ -44,6 +44,8 @@ export type ArticleSection =
 export type ArticleStatus = 'draft' | 'published'
 
 export type Article = {
+  /** Payload document id when loaded from CMS */
+  id?: number
   slug: string
   title: string
   excerpt: string

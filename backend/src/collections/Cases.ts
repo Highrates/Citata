@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
-import { publishedOnly } from '../access'
+import { authenticated, publishedOnly } from '../access'
 import { revalidateCase, revalidateCaseDelete } from '../hooks/revalidateCase'
 
 export const Cases: CollectionConfig = {
@@ -11,6 +11,9 @@ export const Cases: CollectionConfig = {
   },
   access: {
     read: publishedOnly,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   admin: {
     useAsTitle: 'title',

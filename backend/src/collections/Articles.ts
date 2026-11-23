@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
-import { publishedOnly } from '../access'
+import { authenticated, publishedOnly } from '../access'
 import { revalidateArticle, revalidateArticleDelete } from '../hooks/revalidateArticle'
 
 export const Articles: CollectionConfig = {
@@ -11,6 +11,9 @@ export const Articles: CollectionConfig = {
   },
   access: {
     read: publishedOnly,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   admin: {
     useAsTitle: 'title',

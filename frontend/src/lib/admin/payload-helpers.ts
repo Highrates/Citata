@@ -29,6 +29,9 @@ export async function getAdminPayload() {
     throw new Error('PAYLOAD_API_KEY не настроен — подключите backend')
   }
   await requireAdminSession()
+  // Always authenticate reads: publishedOnly hides drafts from anonymous GETs,
+  // which broke update/delete lookup by slug for draft articles/cases.
+  const auth = true as const
   return {
     find: async <T>(args: {
       collection: string
@@ -47,13 +50,13 @@ export async function getAdminPayload() {
       if (args.where) {
         Object.assign(params, buildPayloadWhereParams(args.where))
       }
-      return payloadGet<PayloadListResponse<T>>(`/api/${args.collection}`, params)
+      return payloadGet<PayloadListResponse<T>>(`/api/${args.collection}`, params, { auth })
     },
     findByID: async <T>(args: { collection: string; id: number | string; depth?: number }) => {
-      return payloadGet<T>(`/api/${args.collection}/${args.id}`, { depth: args.depth ?? 0 })
+      return payloadGet<T>(`/api/${args.collection}/${args.id}`, { depth: args.depth ?? 0 }, { auth })
     },
     findGlobal: async <T>(args: { slug: string; depth?: number }) => {
-      return payloadGet<T>(`/api/globals/${args.slug}`, { depth: args.depth ?? 0 })
+      return payloadGet<T>(`/api/globals/${args.slug}`, { depth: args.depth ?? 0 }, { auth })
     },
     create: async <T>(args: { collection: string; data: unknown; draft?: boolean }) => {
       // Always unwrap `{ doc }` so callers can use `.id` safely.

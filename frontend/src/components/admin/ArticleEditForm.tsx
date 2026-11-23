@@ -558,7 +558,8 @@ export function ArticleEditForm({
                 allowLeave()
               }}
             >
-              <input type="hidden" name="slug" value={item?.slug ?? ''} />
+              {item?.id != null ? <input type="hidden" name="id" value={item.id} /> : null}
+              <input type="hidden" name="slug" value={item?.slug || slug} />
               <button type="submit" className="admin-btn admin-btn--danger">
                 Удалить
               </button>

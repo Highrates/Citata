@@ -232,7 +232,7 @@ export async function saveCaseAction(formData: FormData) {
       galleryMediaIds[0] ??
       (await resolveMediaId(payload, { src: coverUrl, mediaId: gallery[0]?.mediaId }, title))
 
-    const existingId = originalSlug ? await findCaseIdBySlug(payload, originalSlug) : undefined
+    let existingId = originalSlug ? await findCaseIdBySlug(payload, originalSlug) : undefined
     const sortOrder = existingId
       ? await getExistingCaseSortOrder(payload, existingId)
       : await getNextCaseSortOrder(payload)
@@ -275,6 +275,9 @@ export async function saveCaseAction(formData: FormData) {
     }
 
     const duplicateId = await findCaseIdBySlug(payload, slug)
+    if (!existingId && duplicateId && originalSlug && originalSlug === slug) {
+      existingId = duplicateId
+    }
     if (duplicateId && duplicateId !== existingId) {
       redirectWithError(basePath, 'Кейс с таким slug уже существует')
     }
@@ -457,8 +460,13 @@ export async function saveArticleAction(formData: FormData) {
     // null clears author; requires migration 20261123_084900 (author_id nullable).
     data.author = authorId ?? null
 
-    const existingId = originalSlug ? await findArticleIdBySlug(payload, originalSlug) : undefined
+    // Prefer originalSlug (edit), but if lookup missed (e.g. draft + unauth) and
+    // the form already lives under this slug, update instead of re-creating.
+    let existingId = originalSlug ? await findArticleIdBySlug(payload, originalSlug) : undefined
     const duplicateId = await findArticleIdBySlug(payload, slug)
+    if (!existingId && duplicateId && originalSlug && originalSlug === slug) {
+      existingId = duplicateId
+    }
     if (duplicateId && duplicateId !== existingId) {
       redirectWithError(basePath, 'Статья с таким slug уже существует')
     }
@@ -487,19 +495,24 @@ export async function saveArticleAction(formData: FormData) {
 
 export async function deleteArticleAction(formData: FormData) {
   const slug = formString(formData, 'slug')
+  const idFromForm = formNumber(formData, 'id', 0)
   const path = slug ? adminPath(`articles/${slug}`) : adminPath('articles')
   requireDatabase(path)
 
   try {
-    if (!slug) redirectWithError(adminPath('articles'), 'Slug не указан')
+    if (!slug && !idFromForm) redirectWithError(adminPath('articles'), 'Slug не указан')
 
     const payload = await getAdminPayload()
-    const id = await findArticleIdBySlug(payload, slug)
+    // Prefer id — draft lookup by slug used to fail without API auth (publishedOnly).
+    const id = idFromForm || (slug ? await findArticleIdBySlug(payload, slug) : undefined)
     if (!id) redirectWithError(path, 'Статья не найдена')
 
     await payload.delete({ collection: 'articles', id })
 
     revalidatePath(adminPath('articles'))
+    revalidatePath('/articles')
+    revalidatePath('/')
+    if (slug) revalidatePath(`/articles/${slug}`)
     revalidateTag('articles')
     redirect(`${adminPath('articles')}?saved=1`)
   } catch (error) {

@@ -498,7 +498,7 @@ export function CaseEditForm({
                 allowLeave()
               }}
             >
-              <input type="hidden" name="slug" value={item?.slug ?? ''} />
+              <input type="hidden" name="slug" value={item?.slug || slug} />
               <button type="submit" className="admin-btn admin-btn--danger">
                 Удалить
               </button>

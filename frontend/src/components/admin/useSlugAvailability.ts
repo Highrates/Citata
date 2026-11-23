@@ -32,14 +32,20 @@ export function useSlugAvailability(opts: {
 
       const seq = ++seqRef.current
       setSlugCheck('checking')
-      const result = await check(normalized, excludeSlug)
-      if (seq !== seqRef.current) return
+      try {
+        const result = await check(normalized, excludeSlug)
+        if (seq !== seqRef.current) return
 
-      if (!result.slug) {
-        setSlugCheck('invalid')
-        return
+        if (!result?.slug) {
+          setSlugCheck('invalid')
+          return
+        }
+        setSlugCheck(result.available ? 'available' : 'taken')
+      } catch {
+        if (seq !== seqRef.current) return
+        // Don't block save on transient check failures
+        setSlugCheck('idle')
       }
-      setSlugCheck(result.available ? 'available' : 'taken')
     },
     [check, excludeSlug],
   )
@@ -49,11 +55,16 @@ export function useSlugAvailability(opts: {
       setSlugCheck('idle')
       return
     }
+    // Existing doc with unchanged slug — skip network check
+    if (excludeSlug && slugify(slug) === excludeSlug) {
+      setSlugCheck('available')
+      return
+    }
     const handle = window.setTimeout(() => {
       void runCheck(slug)
     }, debounceMs)
     return () => window.clearTimeout(handle)
-  }, [slug, slugTouched, runCheck, debounceMs])
+  }, [slug, slugTouched, excludeSlug, runCheck, debounceMs])
 
   const resetSlugCheck = useCallback(() => setSlugCheck('idle'), [])
 

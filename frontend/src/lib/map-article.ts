@@ -114,6 +114,7 @@ export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleCo
   const status = (doc.status as ArticleStatus | null | undefined) ?? 'draft'
 
   return {
+    id: typeof doc.id === 'number' ? doc.id : Number(doc.id) || undefined,
     slug: doc.slug,
     title: doc.title,
     excerpt: doc.excerpt ?? '',
