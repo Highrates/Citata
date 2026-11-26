@@ -519,9 +519,7 @@ export function ArticleEditForm({
             dirty={dirty}
             galleryEmpty={gallery.length === 0}
             saveDisabled={
-              uploadBusy ||
-              isNavigatingAway ||
-              slugCheck === 'taken' ||
+              uploadBusy || isNavigatingAway || slugCheck === 'taken'
             }
             showDelete={!isNew}
             canPreview={Boolean(previewHref)}
