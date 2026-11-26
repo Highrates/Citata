@@ -24,6 +24,7 @@ export type Case = {
   description?: string
   heroTitle?: string
   featured?: boolean
+  homeOrder?: number | null
   status?: CaseStatus
   sortOrder: number
   gallery?: CaseGalleryItem[]
