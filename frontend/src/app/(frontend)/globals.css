@@ -1299,12 +1299,12 @@ img {
 
 .case-page__intro {
   max-width: var(--case-prose);
-  margin: 0 0 40px auto;
+  margin: 0 0 40px;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
-  align-self: flex-end;
+  align-self: flex-start;
   width: 100%;
 }
 
@@ -2005,7 +2005,7 @@ img {
   }
 
   .case-page__intro {
-    margin: 0 0 28px auto;
+    margin: 0 0 28px;
   }
 
   .case-page__related {
