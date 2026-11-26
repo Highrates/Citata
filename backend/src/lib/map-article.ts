@@ -63,7 +63,6 @@ export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleCo
           },
     publishedAt: doc.publishedAt,
     readingTime: doc.readingTime ?? 3,
-    featured: doc.featured ?? false,
     sections,
     seo: doc.meta
       ? {
@@ -105,7 +104,6 @@ export function mapArticleToPayloadData(
     author: options?.authorId,
     publishedAt: article.publishedAt,
     readingTime: article.readingTime,
-    featured: article.featured ?? false,
     sections: article.sections.map(mapArticleSectionToPayloadSection),
     status: 'published' as const,
     meta: article.seo
