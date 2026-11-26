@@ -12,7 +12,8 @@ const headerNavItems = [
   { href: '/works', label: 'КЕЙСЫ' },
   { href: '/services', label: 'УСЛУГИ' },
   { href: '/about', label: 'ЦИТАТА' },
-  { href: '/articles', label: 'НОВОСТИ' },
+  { href: '/events', label: 'СОБЫТИЯ' },
+  { href: '/articles', label: 'СТАТЬИ' },
   { href: '/contacts', label: 'КОНТАКТЫ' },
 ] as const
 
@@ -20,7 +21,8 @@ const menuNavItems = [
   { href: '/works', label: 'Кейсы' },
   { href: '/services', label: 'Услуги' },
   { href: '/about', label: 'О нас' },
-  { href: '/articles', label: 'Новости' },
+  { href: '/events', label: 'События' },
+  { href: '/articles', label: 'Статьи' },
   { href: '/contacts', label: 'Контакты' },
 ] as const
 

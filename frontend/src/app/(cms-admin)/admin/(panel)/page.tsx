@@ -3,6 +3,7 @@ import { adminPath } from '@/lib/admin/constants'
 import {
   fetchAdminArticles,
   fetchAdminCases,
+  fetchAdminEvents,
   fetchAdminPress,
   fetchAdminServices,
 } from '@/lib/admin/data'
@@ -10,8 +11,9 @@ import {
 export const metadata = { title: 'Обзор' }
 
 export default async function AdminDashboardPage() {
-  const [cases, articles, press, services] = await Promise.all([
+  const [cases, events, articles, press, services] = await Promise.all([
     fetchAdminCases(),
+    fetchAdminEvents(),
     fetchAdminArticles(),
     fetchAdminPress(),
     fetchAdminServices(),
@@ -21,6 +23,7 @@ export default async function AdminDashboardPage() {
     { href: adminPath('cases'), title: 'Кейсы', note: `${cases.items.length} работ` },
     { href: adminPath('services'), title: 'Услуги', note: `${services.items.length} позиций` },
     { href: adminPath('about'), title: 'О нас', note: 'Текст и цифры /about' },
+    { href: adminPath('events'), title: 'События', note: `${events.items.length} публикаций` },
     { href: adminPath('articles'), title: 'Статьи', note: `${articles.items.length} публикаций` },
     { href: adminPath('press'), title: 'Пресса', note: `${press.items.length} ссылок` },
     { href: adminPath('settings'), title: 'Настройки', note: 'Контакты, Telegram, юр. инфо' },

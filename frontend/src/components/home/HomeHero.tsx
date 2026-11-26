@@ -21,7 +21,7 @@ const navItems = [
   { href: '/about', label: 'Мы' },
   { href: '/works', label: 'Кейсы' },
   { href: '/services', label: 'Услуги' },
-  { href: '/articles', label: 'Новости' },
+  { href: '/events', label: 'События' },
   { href: '/contacts', label: 'Контакты' },
 ] as const
 

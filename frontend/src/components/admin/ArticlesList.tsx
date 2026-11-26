@@ -18,7 +18,7 @@ type ArticlesListProps = {
   error?: string
 }
 
-type ArticleFilter = 'all' | 'published' | 'featured' | 'draft'
+type ArticleFilter = 'all' | 'published' | 'draft'
 
 function statusLabel(status: ArticleStatus | undefined) {
   if (status === 'published') return 'Опубликовано'
@@ -40,7 +40,6 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
       const status = item.status ?? 'draft'
       if (filter === 'published' && status !== 'published') return false
       if (filter === 'draft' && status !== 'draft') return false
-      if (filter === 'featured' && !(item.featured && status === 'published')) return false
       if (!q) return true
       return (
         item.title.toLowerCase().includes(q) ||
@@ -76,7 +75,6 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
           [
             ['all', 'Все'],
             ['published', 'Опубликованные'],
-            ['featured', 'На главной'],
             ['draft', 'Черновики'],
           ] as const
         ).map(([value, label]) => (
@@ -93,108 +91,92 @@ export function ArticlesList({ items, source, saved, error }: ArticlesListProps)
         ))}
       </div>
 
-      <div className="admin-table-wrap">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th className="admin-table-col-thumb" />
-              <th>Заголовок</th>
-              <th>Статус</th>
-              <th className="admin-table-col-home">Главная</th>
-              <th>Автор</th>
-              <th>Дата</th>
-              <th className="admin-table-actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item) => {
-              const status = item.status ?? 'draft'
-              const inactive = status !== 'published'
-              const videoCover =
-                item.gallery?.[0]?.kind === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(item.cover)
-              return (
-                <tr key={item.slug} className={inactive ? 'admin-table-row--inactive' : undefined}>
-                  <td>
-                    {item.cover ? (
-                      videoCover ? (
-                        <video
-                          src={`${item.cover}${item.cover.includes('#t=') ? '' : '#t=0.001'}`}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          className="admin-table-thumb admin-table-thumb--video"
-                          aria-hidden
-                        />
+      {filtered.length === 0 ? (
+        <p className="admin-muted">
+          {items.length === 0
+            ? 'Пока нет статей. События (бывшие новости) — в разделе «События».'
+            : 'Ничего не найдено по фильтру.'}
+        </p>
+      ) : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th className="admin-table-col-thumb" />
+                <th>Заголовок</th>
+                <th>Статус</th>
+                <th>Автор</th>
+                <th>Дата</th>
+                <th className="admin-table-actions" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item) => {
+                const status = item.status ?? 'draft'
+                const inactive = status !== 'published'
+                const videoCover =
+                  item.gallery?.[0]?.kind === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(item.cover)
+                return (
+                  <tr key={item.slug} className={inactive ? 'admin-table-row--inactive' : undefined}>
+                    <td>
+                      {item.cover ? (
+                        videoCover ? (
+                          <video
+                            src={`${item.cover}${item.cover.includes('#t=') ? '' : '#t=0.001'}`}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="admin-table-thumb admin-table-thumb--video"
+                            aria-hidden
+                          />
+                        ) : (
+                          <Image
+                            src={item.cover}
+                            alt=""
+                            width={46}
+                            height={46}
+                            className="admin-table-thumb"
+                          />
+                        )
                       ) : (
-                        <Image
-                          src={item.cover}
-                          alt=""
-                          width={46}
-                          height={46}
-                          className="admin-table-thumb"
-                        />
-                      )
-                    ) : (
-                      <span className="admin-table-thumb admin-table-thumb--empty" />
-                    )}
-                  </td>
-                  <td>
-                    <Link href={`/admin/articles/${item.slug}`} className="admin-table-title">
-                      {item.title}
-                    </Link>
-                    <div className="admin-table-meta">
-                      {[
-                        item.readingTime != null ? `${item.readingTime} мин` : null,
-                        item.excerpt
-                          ? item.excerpt.length > 64
-                            ? `${item.excerpt.slice(0, 64)}…`
-                            : item.excerpt
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </div>
-                  </td>
-                  <td>
-                    <AdminBadge variant={statusVariant(status)}>{statusLabel(status)}</AdminBadge>
-                  </td>
-                  <td className="admin-table-col-home">
-                    {item.featured && status === 'published' ? (
-                      <span
-                        className="admin-home-dot"
-                        title={
-                          item.homeOrder != null
-                            ? `На главной · позиция ${item.homeOrder}`
-                            : 'На главной'
-                        }
-                        aria-label={
-                          item.homeOrder != null
-                            ? `На главной, позиция ${item.homeOrder}`
-                            : 'На главной'
-                        }
-                      >
-                        {item.homeOrder != null ? item.homeOrder : '●'}
-                      </span>
-                    ) : (
-                      <span className="admin-home-dot admin-home-dot--off" aria-hidden>
-                        ○
-                      </span>
-                    )}
-                  </td>
-                  <td>{item.author.name || '—'}</td>
-                  <td>{formatDateRu(item.publishedAt)}</td>
-                  <td className="admin-table-actions">
-                    <AdminEditLink
-                      href={`/admin/articles/${item.slug}`}
-                      label={`Изменить «${item.title}»`}
-                    />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                        <span className="admin-table-thumb admin-table-thumb--empty" />
+                      )}
+                    </td>
+                    <td>
+                      <Link href={`/admin/articles/${item.slug}`} className="admin-table-title">
+                        {item.title}
+                      </Link>
+                      <div className="admin-table-meta">
+                        {[
+                          item.readingTime != null ? `${item.readingTime} мин` : null,
+                          item.excerpt
+                            ? item.excerpt.length > 64
+                              ? `${item.excerpt.slice(0, 64)}…`
+                              : item.excerpt
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </div>
+                    </td>
+                    <td>
+                      <AdminBadge variant={statusVariant(status)}>{statusLabel(status)}</AdminBadge>
+                    </td>
+                    <td>{item.author.name || '—'}</td>
+                    <td>{formatDateRu(item.publishedAt)}</td>
+                    <td className="admin-table-actions">
+                      <AdminEditLink
+                        href={`/admin/articles/${item.slug}`}
+                        label={`Изменить «${item.title}»`}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   )
 }

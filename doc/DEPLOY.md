@@ -51,9 +51,14 @@ Seed:
 
 ```bash
 npm run seed -w backend
-# includes site, cases, articles, services, press — if /admin/services is empty on prod, run:
+# includes site, cases, events (бывш. новости), services, press
+# seed:articles — no-op (articles fixtures cleared after split)
+# if /admin/services is empty on prod, run:
 # npm run seed:services -w backend
 ```
+
+Migrations: before `payload migrate` in production, take a DB backup. The events-from-articles
+`down` is best-effort only (does not restore gallery/locales/blocks/case rels).
 
 ---
 

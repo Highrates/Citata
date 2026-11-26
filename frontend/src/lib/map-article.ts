@@ -131,8 +131,6 @@ export function mapPayloadArticleToArticle(doc: PayloadArticle & LegacyArticleCo
           },
     publishedAt: doc.publishedAt,
     readingTime: doc.readingTime ?? undefined,
-    featured: doc.featured ?? false,
-    homeOrder: doc.homeOrder ?? null,
     status,
     description,
     gallery: gallery.length
@@ -188,8 +186,6 @@ export function mapArticleToPayloadData(
     ...(options?.authorId != null ? { author: options.authorId } : {}),
     publishedAt: article.publishedAt,
     readingTime: article.readingTime,
-    featured: article.featured ?? false,
-    homeOrder: article.featured ? (article.homeOrder ?? null) : null,
     status,
     description: article.description || null,
     gallery: options?.galleryMediaIds?.map((media) => ({ media })),

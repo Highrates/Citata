@@ -65,7 +65,7 @@ export const Articles: CollectionConfig = {
         plural: 'Медиа',
       },
       admin: {
-        description: 'Первое фото или видео — обложка статьи',
+        description: 'Первое фото или видео — обложка статьи. События (бывш. новости) — отдельная коллекция.',
       },
       fields: [
         {
@@ -177,25 +177,6 @@ export const Articles: CollectionConfig = {
           ],
         },
       ],
-    },
-    {
-      name: 'featured',
-      type: 'checkbox',
-      defaultValue: false,
-      label: 'Показать на главной',
-      admin: {
-        position: 'sidebar',
-      },
-    },
-    {
-      name: 'homeOrder',
-      type: 'number',
-      label: 'Порядок на главной',
-      admin: {
-        position: 'sidebar',
-        description: 'Общий слот с кейсами. Появляется при выводе на главную.',
-        condition: (_, siblingData) => Boolean(siblingData?.featured),
-      },
     },
     {
       name: 'status',

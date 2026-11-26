@@ -19,6 +19,8 @@ type AdminPublishAsideProps = {
   statusOptions?: StatusOption[]
   deleteLabel?: string
   featuredLabel?: string
+  /** When false, hide «на главной» + homeOrder (articles in v1). */
+  showFeatured?: boolean
   previewHint?: string
   onStatusChange: (status: CaseStatus) => void
   onFeaturedChange: (featured: boolean) => void
@@ -47,6 +49,7 @@ export function AdminPublishAside({
   statusOptions = DEFAULT_STATUS_OPTIONS,
   deleteLabel = 'Удалить кейс',
   featuredLabel = 'Отображать на главной',
+  showFeatured = true,
   previewHint,
   onStatusChange,
   onFeaturedChange,
@@ -83,6 +86,7 @@ export function AdminPublishAside({
           </select>
         </div>
 
+        {showFeatured ? (
         <label className="admin-edit-check">
           <input
             type="checkbox"
@@ -91,8 +95,9 @@ export function AdminPublishAside({
           />
           <span>{featuredLabel}</span>
         </label>
+        ) : null}
 
-        {featured ? (
+        {showFeatured && featured ? (
           <div className="admin-field">
             <label className="admin-field-label" htmlFor="homeOrder">
               Порядок на главной
@@ -117,7 +122,7 @@ export function AdminPublishAside({
                 {homeOrderWarning}
               </p>
             ) : (
-              <p className="admin-muted">Общий порядок с кейсами и статьями (1 = первый)</p>
+              <p className="admin-muted">Общий порядок с кейсами и событиями (1 = первый)</p>
             )}
           </div>
         ) : null}

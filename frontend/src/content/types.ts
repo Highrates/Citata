@@ -27,7 +27,7 @@ export type Case = {
   description?: string
   heroTitle?: string
   featured?: boolean
-  /** Shared homepage slot with articles (only when featured) */
+  /** Shared homepage slot with events (only when featured) */
   homeOrder?: number | null
   status?: CaseStatus
   /** Order on /works (admin drag). Not used on home. */
@@ -45,6 +45,13 @@ export type ArticleSection =
   | { type: 'list'; items: string[] }
 
 export type ArticleStatus = 'draft' | 'published'
+export type EventStatus = ArticleStatus
+
+export type RelatedCaseRef = {
+  id?: number
+  slug: string
+  title: string
+}
 
 export type Article = {
   /** Payload document id when loaded from CMS */
@@ -57,9 +64,6 @@ export type Article = {
   author: { name: string; role: string; photo?: string }
   publishedAt: string
   readingTime?: number
-  featured?: boolean
-  /** Shared homepage slot with cases (only when featured) */
-  homeOrder?: number | null
   status?: ArticleStatus
   /** HTML из RichBlock */
   description?: string
@@ -67,6 +71,14 @@ export type Article = {
   /** @deprecated prefer `description` HTML */
   sections: ArticleSection[]
   seo?: { title?: string; description?: string }
+}
+
+/** Former «новости»; may link to one or more cases. Home slots shared with cases. */
+export type Event = Omit<Article, 'status'> & {
+  status?: EventStatus
+  featured?: boolean
+  homeOrder?: number | null
+  cases?: RelatedCaseRef[]
 }
 
 export type PressMention = {

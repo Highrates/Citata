@@ -86,7 +86,7 @@ Env:
 | Путь | Назначение |
 |------|------------|
 | `payload.config.ts` | PostgreSQL, S3, SEO, CORS |
-| `collections/` | Cases, Articles, Authors, Media, PressMentions, Users |
+| `collections/` | Cases, Events, Articles, Authors, Media, PressMentions, Users |
 | `globals/SiteSettings.ts` | Настройки сайта |
 | `hooks/revalidate*.ts` | Webhook на `FRONTEND_URL/api/revalidate` |
 | `app/(payload)/` | `/payload` + `/api` |
@@ -99,13 +99,14 @@ Access: публичный `read` для опубликованных кейсо
 ## Контент-модель
 
 Единые типы в `frontend/src/content/types.ts` (копия в `backend/src/content/`).  
-Мапперы: `map-case`, `map-article`, `map-site`, `map-press`.  
+Мапперы: `map-case`, `map-event`, `map-article`, `map-site`, `map-press`.  
 Тесты: `npm test` (frontend).
 
 Seed:
 
 ```bash
 npm run seed -w backend
+# seed:events — бывшие новости; seed:articles — no-op (пустые «Статьи»)
 ```
 
 ---

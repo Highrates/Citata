@@ -38,6 +38,15 @@ export type ArticleSection =
   | { type: 'quote'; text: string }
   | { type: 'list'; items: string[] }
 
+export type ArticleStatus = 'draft' | 'published'
+export type EventStatus = ArticleStatus
+
+export type RelatedCaseRef = {
+  id?: number
+  slug: string
+  title: string
+}
+
 export type Article = {
   slug: string
   title: string
@@ -47,9 +56,20 @@ export type Article = {
   author: { name: string; role: string; photo?: string }
   publishedAt: string
   readingTime: number
-  featured?: boolean
+  status?: ArticleStatus
+  /** HTML из RichBlock */
+  description?: string
+  /** @deprecated prefer `description` HTML */
   sections: ArticleSection[]
   seo?: { title?: string; description?: string }
+}
+
+/** Former «новости»; may link to one or more cases. Home slots shared with cases. */
+export type Event = Omit<Article, 'status'> & {
+  status?: EventStatus
+  featured?: boolean
+  homeOrder?: number | null
+  cases?: RelatedCaseRef[]
 }
 
 export type PressMention = {

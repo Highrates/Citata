@@ -9,17 +9,18 @@ export const revalidateArticle: CollectionAfterChangeHook = ({
 }) => {
   if (context.disableRevalidate) return doc
 
+  // Articles are not on the homepage — do not revalidate `/`.
   if (doc.status === 'published') {
     payload.logger.info(`Revalidating article: /articles/${doc.slug}`)
     void revalidateFrontend({
-      paths: [`/articles/${doc.slug}`, '/articles', '/'],
+      paths: [`/articles/${doc.slug}`, '/articles'],
       tags: ['articles', 'sitemap'],
     })
   }
 
   if (previousDoc?.status === 'published' && doc.status !== 'published') {
     void revalidateFrontend({
-      paths: [`/articles/${previousDoc.slug}`, '/articles', '/'],
+      paths: [`/articles/${previousDoc.slug}`, '/articles'],
       tags: ['articles', 'sitemap'],
     })
   }
@@ -32,7 +33,7 @@ export const revalidateArticleDelete: CollectionAfterDeleteHook = ({ doc, req: {
 
   if (doc?.slug) {
     void revalidateFrontend({
-      paths: [`/articles/${doc.slug}`, '/articles', '/'],
+      paths: [`/articles/${doc.slug}`, '/articles'],
       tags: ['articles', 'sitemap'],
     })
   }

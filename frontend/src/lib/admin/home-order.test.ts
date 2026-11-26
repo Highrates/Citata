@@ -30,11 +30,11 @@ test('homeOrderConflictMessage names collection', () => {
   )
   assert.match(
     homeOrderConflictMessage({
-      kind: 'article',
+      kind: 'event',
       slug: 'news',
       title: 'News',
       homeOrder: 1,
     }),
-    /статьёй «News»/,
+    /событием «News»/,
   )
 })

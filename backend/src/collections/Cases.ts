@@ -113,7 +113,7 @@ export const Cases: CollectionConfig = {
       label: 'Порядок на главной',
       admin: {
         position: 'sidebar',
-        description: 'Общий слот с статьями. Появляется при выводе на главную.',
+        description: 'Общий слот с событиями. Появляется при выводе на главную.',
         condition: (_, siblingData) => Boolean(siblingData?.featured),
       },
     },

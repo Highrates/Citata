@@ -5,11 +5,12 @@ import { formatArticleDateRu, formatReadingTimeRu } from '@/lib/reading-time'
 
 type BlogRowProps = {
   item: Article
+  hrefPrefix?: string
 }
 
-export function BlogRow({ item }: BlogRowProps) {
+export function BlogRow({ item, hrefPrefix = '/articles' }: BlogRowProps) {
   return (
-    <Link href={`/articles/${item.slug}`} className="blog-row">
+    <Link href={`${hrefPrefix}/${item.slug}`} className="blog-row">
       <div className="blog-row__author">
         {item.author.photo ? (
           <span className="blog-row__avatar">

@@ -1,4 +1,4 @@
-export type HomeOrderKind = 'case' | 'article'
+export type HomeOrderKind = 'case' | 'event'
 
 export type HomeOrderOccupant = {
   kind: HomeOrderKind
@@ -23,6 +23,6 @@ export function parseHomeOrder(raw: string): number | null {
 }
 
 export function homeOrderConflictMessage(conflict: HomeOrderOccupant): string {
-  const kindLabel = conflict.kind === 'case' ? 'кейсом' : 'статьёй'
+  const kindLabel = conflict.kind === 'case' ? 'кейсом' : 'событием'
   return `Позиция ${conflict.homeOrder} уже занята ${kindLabel} «${conflict.title}»`
 }

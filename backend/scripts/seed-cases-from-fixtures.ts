@@ -91,6 +91,8 @@ async function main() {
       heroTitle: caseItem.heroTitle,
       description: caseItem.description || blocksToHtml(caseItem.blocks),
       featured: caseItem.featured ?? false,
+      homeOrder:
+        caseItem.featured && caseItem.homeOrder != null ? caseItem.homeOrder : null,
       sortOrder: caseItem.sortOrder,
       cover: coverId,
       gallery: [{ media: coverId }],

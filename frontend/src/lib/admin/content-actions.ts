@@ -14,12 +14,14 @@ import {
   ensureAuthor,
   findArticleIdBySlug,
   findCaseIdBySlug,
+  findEventIdBySlug,
   findServiceIdBySlug,
   getAdminPayload,
   hasPayloadDatabase,
   resolveMediaId,
 } from '@/lib/admin/payload-helpers'
 import { mapArticleToPayloadData } from '@/lib/map-article'
+import { mapEventToPayloadData } from '@/lib/map-event'
 import { mapCaseToPayloadData } from '@/lib/map-case'
 import { mapPressMentionToPayloadData } from '@/lib/map-press'
 import { mapServiceToPayloadData } from '@/lib/map-service'
@@ -115,35 +117,42 @@ type HomeOrderDoc = {
   slug?: string | null
   title?: string | null
   homeOrder?: number | null
+  featured?: boolean | null
+  status?: string | null
+}
+
+/** Only published + featured slots count — drafts must not reserve homepage order. */
+function isLiveHomeOccupant(doc: HomeOrderDoc) {
+  if (!doc.featured) return false
+  if ((doc.status ?? 'published') !== 'published') return false
+  return typeof doc.homeOrder === 'number' && Number.isFinite(doc.homeOrder)
 }
 
 async function collectHomeOrderOccupants(
   payload: AdminPayloadClient,
 ): Promise<HomeOrderOccupant[]> {
-  const [cases, articles] = await Promise.all([
+  const [cases, eventDocs] = await Promise.all([
     findAllDocs<HomeOrderDoc>(payload, { collection: 'cases', depth: 0 }),
-    findAllDocs<HomeOrderDoc>(payload, { collection: 'articles', depth: 0 }),
+    findAllDocs<HomeOrderDoc>(payload, { collection: 'events', depth: 0 }),
   ])
 
   const out: HomeOrderOccupant[] = []
   for (const doc of cases) {
-    if (typeof doc.homeOrder !== 'number' || !Number.isFinite(doc.homeOrder)) continue
-    if (!doc.slug) continue
+    if (!isLiveHomeOccupant(doc) || !doc.slug) continue
     out.push({
       kind: 'case',
       slug: doc.slug,
       title: doc.title || doc.slug,
-      homeOrder: doc.homeOrder,
+      homeOrder: doc.homeOrder as number,
     })
   }
-  for (const doc of articles) {
-    if (typeof doc.homeOrder !== 'number' || !Number.isFinite(doc.homeOrder)) continue
-    if (!doc.slug) continue
+  for (const doc of eventDocs) {
+    if (!isLiveHomeOccupant(doc) || !doc.slug) continue
     out.push({
-      kind: 'article',
+      kind: 'event',
       slug: doc.slug,
       title: doc.title || doc.slug,
-      homeOrder: doc.homeOrder,
+      homeOrder: doc.homeOrder as number,
     })
   }
   return out
@@ -353,9 +362,13 @@ export async function saveCaseAction(formData: FormData) {
 
     const wantFeatured = formBool(formData, 'featured')
     const featured = wantFeatured && status === 'published'
-    const homeOrder = wantFeatured ? parseHomeOrder(formString(formData, 'homeOrder')) : null
-    if (wantFeatured && homeOrder == null) {
+    // Persist homeOrder only for live homepage slots (published + featured)
+    const homeOrder = featured ? parseHomeOrder(formString(formData, 'homeOrder')) : null
+    if (featured && homeOrder == null) {
       redirectWithError(basePath, 'Укажите порядок на главной (число ≥ 1)')
+    }
+    if (featured && !coverUrl) {
+      redirectWithError(basePath, 'Для главной нужна обложка')
     }
     if (homeOrder != null) {
       await assertHomeOrderAvailable(payload, homeOrder, 'case', originalSlug || slug, basePath)
@@ -544,22 +557,6 @@ export async function saveArticleAction(formData: FormData) {
     const description = formString(formData, 'description') || undefined
     const readingTime = readingTimeRaw ? formNumber(formData, 'readingTime', 0) : null
 
-    const wantFeatured = formBool(formData, 'featured')
-    const featured = wantFeatured && status === 'published'
-    const homeOrder = wantFeatured ? parseHomeOrder(formString(formData, 'homeOrder')) : null
-    if (wantFeatured && homeOrder == null) {
-      redirectWithError(basePath, 'Укажите порядок на главной (число ≥ 1)')
-    }
-    if (homeOrder != null) {
-      await assertHomeOrderAvailable(
-        payload,
-        homeOrder,
-        'article',
-        originalSlug || slug,
-        basePath,
-      )
-    }
-
     const article = {
       slug,
       title,
@@ -569,8 +566,6 @@ export async function saveArticleAction(formData: FormData) {
       author: { name: authorName, role: formString(formData, 'role') },
       publishedAt: new Date(publishedAt).toISOString(),
       readingTime: readingTime ?? undefined,
-      featured,
-      homeOrder,
       status,
       description,
       gallery,
@@ -591,8 +586,6 @@ export async function saveArticleAction(formData: FormData) {
       readingTime,
       gallery: galleryMediaIds.map((media) => ({ media })),
       status,
-      featured,
-      homeOrder,
       description: description || null,
       sections: [],
       meta: {
@@ -626,7 +619,6 @@ export async function saveArticleAction(formData: FormData) {
       revalidatePath(`/articles/${originalSlug}`)
     }
     revalidatePath('/articles')
-    revalidatePath('/')
     revalidateTag('articles')
     redirect(`${adminPath(`articles/${slug}`)}?saved=1`)
   } catch (error) {
@@ -654,10 +646,226 @@ export async function deleteArticleAction(formData: FormData) {
 
     revalidatePath(adminPath('articles'))
     revalidatePath('/articles')
-    revalidatePath('/')
     if (slug) revalidatePath(`/articles/${slug}`)
     revalidateTag('articles')
     redirect(`${adminPath('articles')}?saved=1`)
+  } catch (error) {
+    unstable_rethrow(error)
+    const message = error instanceof Error ? error.message : 'Ошибка удаления'
+    redirectWithError(path, message)
+  }
+}
+
+export async function checkEventSlugAction(
+  slugRaw: string,
+  excludeSlug?: string,
+): Promise<{ available: boolean; slug: string; reason?: string }> {
+  const slug = slugify(slugRaw)
+  if (!slug) {
+    return { available: false, slug: '', reason: 'Пустой slug' }
+  }
+
+  if (!hasPayloadDatabase()) {
+    return { available: true, slug }
+  }
+
+  try {
+    const payload = await getAdminPayload()
+    const existingId = await findEventIdBySlug(payload, slug)
+    if (!existingId) return { available: true, slug }
+
+    if (excludeSlug && excludeSlug === slug) {
+      return { available: true, slug }
+    }
+
+    if (excludeSlug) {
+      const currentId = await findEventIdBySlug(payload, excludeSlug)
+      if (currentId && currentId === existingId) {
+        return { available: true, slug }
+      }
+    }
+
+    return { available: false, slug, reason: 'Уже занят' }
+  } catch {
+    return { available: false, slug, reason: 'Не удалось проверить' }
+  }
+}
+
+export async function saveEventAction(formData: FormData) {
+  const returnPath = formData.get('returnPath')
+  const basePath =
+    typeof returnPath === 'string' && returnPath.startsWith(adminPath('events'))
+      ? returnPath.split('?')[0]
+      : adminPath('events/new')
+
+  requireDatabase(basePath)
+
+  try {
+    const payload = await getAdminPayload()
+    const originalSlug = formString(formData, 'originalSlug')
+    const slug = slugify(formString(formData, 'slug'))
+    const title = formString(formData, 'title')
+    const authorName = formString(formData, 'author')
+    const publishedAt = formString(formData, 'publishedAt')
+    const readingTimeRaw = formString(formData, 'readingTime')
+
+    if (!title || !slug || !publishedAt) {
+      redirectWithError(basePath, 'Заполните обязательные поля')
+    }
+
+    const gallery = parseJsonField<GalleryItem[]>(
+      formString(formData, 'galleryJson'),
+      'галерея',
+    )
+    const coverUrl = formString(formData, 'cover') || gallery[0]?.src || ''
+    if (!coverUrl) {
+      redirectWithError(basePath, 'Добавьте хотя бы одно фото или видео в галерею')
+    }
+
+    const caseSlugs = parseJsonField<string[]>(formString(formData, 'casesJson'), 'кейсы')
+    const caseIds: number[] = []
+    for (const caseSlug of caseSlugs) {
+      const id = await findCaseIdBySlug(payload, slugify(caseSlug))
+      if (id) caseIds.push(id)
+    }
+
+    const statusRaw = formString(formData, 'status') as ArticleStatus
+    const status: ArticleStatus =
+      statusRaw === 'published' || statusRaw === 'draft' ? statusRaw : 'draft'
+
+    const galleryMediaIds: number[] = []
+    for (const item of gallery) {
+      if (!item.src && item.mediaId == null) continue
+      const id = await resolveMediaId(payload, item, item.alt || title)
+      galleryMediaIds.push(id)
+    }
+
+    const coverId =
+      galleryMediaIds[0] ??
+      (await resolveMediaId(payload, { src: coverUrl, mediaId: gallery[0]?.mediaId }, title))
+    const authorId = authorName
+      ? await ensureAuthor(payload, authorName, formString(formData, 'role'))
+      : undefined
+
+    const seoTitle = formString(formData, 'seoTitle') || undefined
+    const seoDescription = formString(formData, 'seoDescription') || undefined
+    const description = formString(formData, 'description') || undefined
+    const readingTime = readingTimeRaw ? formNumber(formData, 'readingTime', 0) : null
+
+    const wantFeatured = formBool(formData, 'featured')
+    const featured = wantFeatured && status === 'published'
+    // Persist homeOrder only for live homepage slots (published + featured)
+    const homeOrder = featured ? parseHomeOrder(formString(formData, 'homeOrder')) : null
+    if (featured && homeOrder == null) {
+      redirectWithError(basePath, 'Укажите порядок на главной (число ≥ 1)')
+    }
+    if (featured && !coverUrl) {
+      redirectWithError(basePath, 'Для главной нужна обложка')
+    }
+    if (homeOrder != null) {
+      await assertHomeOrderAvailable(payload, homeOrder, 'event', originalSlug || slug, basePath)
+    }
+
+    const event = {
+      slug,
+      title,
+      excerpt: formString(formData, 'excerpt'),
+      cover: coverUrl,
+      coverAlt: gallery[0]?.alt || title,
+      author: { name: authorName, role: formString(formData, 'role') },
+      publishedAt: new Date(publishedAt).toISOString(),
+      readingTime: readingTime ?? undefined,
+      featured,
+      homeOrder,
+      status,
+      description,
+      gallery,
+      sections: [] as [],
+      seo: {
+        title: seoTitle,
+        description: seoDescription,
+      },
+    }
+
+    const data: Record<string, unknown> = {
+      ...mapEventToPayloadData(event, {
+        coverId,
+        authorId,
+        galleryMediaIds,
+        caseIds,
+      }),
+      cover: coverId,
+      readingTime,
+      gallery: galleryMediaIds.map((media) => ({ media })),
+      cases: caseIds,
+      status,
+      featured,
+      homeOrder,
+      description: description || null,
+      meta: {
+        title: seoTitle || null,
+        description: seoDescription || null,
+      },
+    }
+    data.author = authorId ?? null
+
+    let existingId = originalSlug ? await findEventIdBySlug(payload, originalSlug) : undefined
+    const duplicateId = await findEventIdBySlug(payload, slug)
+    if (!existingId && duplicateId && originalSlug && originalSlug === slug) {
+      existingId = duplicateId
+    }
+    if (duplicateId && duplicateId !== existingId) {
+      redirectWithError(basePath, 'Событие с таким slug уже существует')
+    }
+
+    if (existingId) {
+      await payload.update({ collection: 'events', id: existingId, data })
+    } else {
+      await payload.create({ collection: 'events', data, draft: false })
+    }
+
+    revalidatePath(adminPath('events'))
+    revalidatePath(`/events/${slug}`)
+    if (originalSlug && originalSlug !== slug) {
+      revalidatePath(`/events/${originalSlug}`)
+    }
+    for (const caseSlug of caseSlugs) {
+      revalidatePath(`/works/${slugify(caseSlug)}`)
+    }
+    revalidatePath('/events')
+    revalidatePath('/')
+    revalidateTag('events')
+    revalidateTag('cases')
+    redirect(`${adminPath(`events/${slug}`)}?saved=1`)
+  } catch (error) {
+    unstable_rethrow(error)
+    const message = error instanceof Error ? error.message : 'Ошибка сохранения'
+    redirectWithError(basePath, message)
+  }
+}
+
+export async function deleteEventAction(formData: FormData) {
+  const slug = formString(formData, 'slug')
+  const idFromForm = formNumber(formData, 'id', 0)
+  const path = slug ? adminPath(`events/${slug}`) : adminPath('events')
+  requireDatabase(path)
+
+  try {
+    if (!slug && !idFromForm) redirectWithError(adminPath('events'), 'Slug не указан')
+
+    const payload = await getAdminPayload()
+    const id = idFromForm || (slug ? await findEventIdBySlug(payload, slug) : undefined)
+    if (!id) redirectWithError(path, 'Событие не найдено')
+
+    await payload.delete({ collection: 'events', id })
+
+    revalidatePath(adminPath('events'))
+    revalidatePath('/events')
+    revalidatePath('/')
+    if (slug) revalidatePath(`/events/${slug}`)
+    revalidateTag('events')
+    revalidateTag('cases')
+    redirect(`${adminPath('events')}?saved=1`)
   } catch (error) {
     unstable_rethrow(error)
     const message = error instanceof Error ? error.message : 'Ошибка удаления'

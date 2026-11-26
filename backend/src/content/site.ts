@@ -8,7 +8,7 @@ export const siteSettings: SiteSettings = {
   agencyTitle: 'Агентство информационных технологий & коммуникаций',
   heroTitle: 'Привлекаем внимание к бизнесу, стартапу или мероприятию',
   heroSubtitle: 'PR-агентство',
-  telegramBotUrl: 'https://t.me/citata_pr_bot',
+  telegramBotUrl: 'https://t.me/kate_kolesnik',
   telegramChannelUrl: 'https://t.me/citatapr',
   infoEmail: 'info@citata-pr.ru',
   aboutText:

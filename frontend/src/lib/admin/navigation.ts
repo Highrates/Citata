@@ -11,6 +11,7 @@ export const adminNavItems: AdminNavItem[] = [
   { href: adminPath('cases'), label: 'Кейсы' },
   { href: adminPath('services'), label: 'Услуги' },
   { href: adminPath('about'), label: 'О нас' },
+  { href: adminPath('events'), label: 'События' },
   { href: adminPath('articles'), label: 'Статьи' },
   { href: adminPath('press'), label: 'Пресса' },
   { href: adminPath('settings'), label: 'Настройки' },

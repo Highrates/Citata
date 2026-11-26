@@ -10,6 +10,7 @@ import sharp from 'sharp'
 import { Articles } from './collections/Articles'
 import { Authors } from './collections/Authors'
 import { Cases } from './collections/Cases'
+import { Events } from './collections/Events'
 import { Media } from './collections/Media'
 import { PressMentions } from './collections/PressMentions'
 import { Services } from './collections/Services'
@@ -35,7 +36,7 @@ export default buildConfig({
       titleSuffix: '— ЦИТАТА',
     },
   },
-  collections: [Users, Media, Authors, Cases, Articles, PressMentions, Services],
+  collections: [Users, Media, Authors, Cases, Events, Articles, PressMentions, Services],
   globals: [SiteSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
@@ -66,7 +67,7 @@ export default buildConfig({
   ].filter(Boolean),
   plugins: [
     seoPlugin({
-      collections: ['cases', 'articles'],
+      collections: ['cases', 'events', 'articles'],
       uploadsCollection: 'media',
       generateTitle: ({ doc }) => {
         if ('title' in doc && typeof doc.title === 'string') {
@@ -78,6 +79,9 @@ export default buildConfig({
         const base = process.env.FRONTEND_URL || 'https://citata-pr.ru'
         if (collectionSlug === 'cases' && 'slug' in doc) {
           return `${base}/works/${doc.slug}`
+        }
+        if (collectionSlug === 'events' && 'slug' in doc) {
+          return `${base}/events/${doc.slug}`
         }
         if (collectionSlug === 'articles' && 'slug' in doc) {
           return `${base}/articles/${doc.slug}`

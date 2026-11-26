@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { articles } from '@/content/articles'
+import { events } from '@/content/events'
 import { validateArticle } from '@/content/article-model'
 import { lexicalToSections } from '@/lib/lexical-utils'
 import {
@@ -11,17 +12,22 @@ import {
 } from '@/lib/map-article'
 import type { Article as PayloadArticle } from '@/payload-types'
 
-test('fixture articles conform to canonical model', () => {
-  for (const article of articles) {
-    assert.deepEqual(validateArticle(article), [])
-    for (const section of article.sections) {
+test('fixture articles section starts empty after events split', () => {
+  assert.equal(articles.length, 0)
+})
+
+test('fixture events (former news) conform to canonical article model', () => {
+  for (const item of events) {
+    assert.deepEqual(validateArticle(item), [])
+    for (const section of item.sections) {
       assert.ok(section.type)
     }
   }
 })
 
 test('round-trip: fixture section → payload section → article section', () => {
-  const fixture = articles[0]
+  const fixture = events[0]
+  assert.ok(fixture)
   for (const section of fixture.sections) {
     const payloadSection = mapArticleSectionToPayloadSection(section)
     const restored = mapPayloadSectionToArticleSection(payloadSection)
@@ -30,7 +36,8 @@ test('round-trip: fixture section → payload section → article section', () =
 })
 
 test('mapArticleToPayloadData preserves scalar fields', () => {
-  const fixture = articles[0]
+  const fixture = events[0]
+  assert.ok(fixture)
   const payloadData = mapArticleToPayloadData(fixture, { coverId: 1, authorId: 2 })
 
   assert.equal(payloadData.slug, fixture.slug)

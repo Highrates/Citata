@@ -476,6 +476,93 @@
   background-size: 14px;
 }
 
+.admin-tag-select {
+  position: relative;
+}
+
+.admin-tag-select__control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: var(--account-hairline-width) solid var(--admin-border-secondary);
+  border-radius: 6px;
+  background: var(--color-white);
+  cursor: text;
+  transition: border-color 0.15s ease;
+}
+
+.admin-tag-select--open .admin-tag-select__control,
+.admin-tag-select__control:focus-within {
+  border-color: var(--color-blue);
+}
+
+.admin-tag-select__chips {
+  display: contents;
+}
+
+.admin-tag-select__input {
+  flex: 1 1 120px;
+  min-width: 120px;
+  height: 28px;
+  margin: 0;
+  padding: 0 4px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-black);
+}
+
+.admin-tag-select__input::placeholder {
+  color: var(--admin-text-tertiary);
+}
+
+.admin-tag-select__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow: auto;
+  list-style: none;
+  background: var(--color-white);
+  border: var(--account-hairline-width) solid var(--admin-border-secondary);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.admin-tag-select__option {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-black);
+  cursor: pointer;
+}
+
+.admin-tag-select__option:hover,
+.admin-tag-select__option--active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.admin-tag-select__empty {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--admin-text-tertiary);
+}
+
 .admin-control::placeholder {
   color: var(--admin-text-tertiary);
 }
@@ -1086,13 +1173,18 @@ a.admin-btn:focus {
 }
 
 .admin-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 22px;
   height: 22px;
+  padding: 0;
   border: none;
   border-radius: 50%;
   background: transparent;
   color: var(--color-gray);
   font-size: 1.125rem;
+  line-height: 1;
   cursor: pointer;
 }
 

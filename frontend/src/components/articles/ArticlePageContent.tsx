@@ -6,9 +6,14 @@ import Link from 'next/link'
 import gsap from 'gsap'
 import { ArticleBody } from '@/components/articles/ArticleBody'
 import { BlogRow } from '@/components/articles/BlogRow'
+import { CaseCard } from '@/components/cases/CaseCard'
+import {
+  PageBreadcrumbs,
+  type BreadcrumbItem,
+} from '@/components/layout/PageBreadcrumbs'
 import { PageGallery } from '@/components/media/PageGallery'
 import { ConsultationCta } from '@/components/ui/ConsultationCta'
-import type { Article } from '@/content/types'
+import type { Article, Case } from '@/content/types'
 import { isVideoMedia } from '@/lib/media-kind'
 import { formatArticleDateRu, formatReadingTimeRu } from '@/lib/reading-time'
 
@@ -17,6 +22,15 @@ type ArticlePageContentProps = {
   related: Article[]
   telegramBotUrl: string
   arrowSrc: string
+  breadcrumbs?: BreadcrumbItem[]
+  /** List/detail base path for related rows («Статьи» or «События»). */
+  relatedHrefPrefix?: string
+  relatedLabel?: string
+  allLabel?: string
+  allHref?: string
+  /** Materials / linked cases — rendered before Telegram CTA. */
+  linkedCases?: Case[]
+  linkedCasesLabel?: string
 }
 
 export function ArticlePageContent({
@@ -24,6 +38,13 @@ export function ArticlePageContent({
   related,
   telegramBotUrl,
   arrowSrc,
+  breadcrumbs,
+  relatedHrefPrefix = '/articles',
+  relatedLabel = 'Ещё статьи',
+  allLabel = '← Все статьи',
+  allHref = '/articles',
+  linkedCases = [],
+  linkedCasesLabel = 'Материалы',
 }: ArticlePageContentProps) {
   const rootRef = useRef<HTMLElement>(null)
   const curtainLeftRef = useRef<HTMLSpanElement>(null)
@@ -47,10 +68,13 @@ export function ArticlePageContent({
         y: 28,
         opacity: 0,
       })
-      gsap.set('.article-page__body, .article-page__author, .article-page__related', {
-        y: 24,
-        opacity: 0,
-      })
+      gsap.set(
+        '.article-page__body, .article-page__author, .article-page__materials, .article-page__related',
+        {
+          y: 24,
+          opacity: 0,
+        },
+      )
       if (left && right) {
         gsap.set(left, { xPercent: 0 })
         gsap.set(right, { xPercent: 0 })
@@ -68,7 +92,8 @@ export function ArticlePageContent({
 
       tl.to('.article-page__body', { y: 0, opacity: 1, duration: 0.7 }, 0.55)
         .to('.article-page__author', { y: 0, opacity: 1, duration: 0.6 }, 0.7)
-        .to('.article-page__related', { y: 0, opacity: 1, duration: 0.65 }, 0.82)
+        .to('.article-page__materials', { y: 0, opacity: 1, duration: 0.6 }, 0.78)
+        .to('.article-page__related', { y: 0, opacity: 1, duration: 0.65 }, 0.9)
     }, rootRef)
 
     return () => ctx.revert()
@@ -77,6 +102,9 @@ export function ArticlePageContent({
   return (
     <article ref={rootRef} className="article-page">
       <header className="article-page__header">
+        {breadcrumbs?.length ? (
+          <PageBreadcrumbs className="page-breadcrumbs--in-header" items={breadcrumbs} />
+        ) : null}
         <p className="article-page__meta">
           {[formatArticleDateRu(item.publishedAt), formatReadingTimeRu(item.readingTime)]
             .filter(Boolean)
@@ -147,21 +175,48 @@ export function ArticlePageContent({
         </div>
       ) : null}
 
+      {linkedCases.length > 0 ? (
+        <section
+          className="container article-page__materials case-page__related"
+          aria-labelledby="article-materials-heading"
+        >
+          <h2 id="article-materials-heading" className="case-page__section-label">
+            {linkedCasesLabel}
+          </h2>
+          <div className="case-page__related-grid">
+            {linkedCases.map((caseItem) => (
+              <CaseCard
+                key={caseItem.slug}
+                item={caseItem}
+                showYear={false}
+                naturalMedia
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {related.length > 0 ? (
-        <div className="article-page__related">
-          <p className="article-page__related-label">Ещё статьи</p>
+        <section className="container article-page__related" aria-labelledby="article-related-heading">
+          <h2 id="article-related-heading" className="case-page__section-label">
+            {relatedLabel}
+          </h2>
           <div className="blog-page__list">
             {related.map((relatedItem) => (
-              <BlogRow key={relatedItem.slug} item={relatedItem} />
+              <BlogRow
+                key={relatedItem.slug}
+                item={relatedItem}
+                hrefPrefix={relatedHrefPrefix}
+              />
             ))}
           </div>
           <p className="article-page__back">
-            <Link href="/articles">← Все статьи</Link>
+            <Link href={allHref}>{allLabel}</Link>
           </p>
-        </div>
+        </section>
       ) : (
-        <p className="article-page__back">
-          <Link href="/articles">← Все статьи</Link>
+        <p className="article-page__back article-page__back--padded">
+          <Link href={allHref}>{allLabel}</Link>
         </p>
       )}
 

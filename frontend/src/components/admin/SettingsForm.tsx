@@ -107,7 +107,7 @@ export function SettingsForm({ settings, source, saved, error }: SettingsFormPro
 
         <div className="admin-field">
           <label className="admin-field-label" htmlFor="telegramBotUrl">
-            Telegram-бот (консультация)
+            Telegram для консультации
           </label>
           <input
             className="admin-control admin-control--input"

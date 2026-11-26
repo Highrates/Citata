@@ -15,6 +15,7 @@ export const cases: Case[] = [
     heroTitle:
       'Информационная поддержка во время кризиса. «Краснополянская косметика» сохранила бизнес после суда и получила новых клиентов',
     featured: true,
+    homeOrder: 13,
     sortOrder: 8,
     gallery: [
       {
@@ -90,6 +91,7 @@ export const cases: Case[] = [
     cover: `${CDN}/680fda25ce3505d72faf1da2_hollyshop%201-2.jpg`,
     coverAlt: 'hollyshop — PR-кейс ЦИТАТА',
     featured: true,
+    homeOrder: 8,
     sortOrder: 3,
     year: 2024,
     summary: 'PR hollyshop: Forbes, городские интеграции, стор в Петербурге, запуски epii и VK Tusa.',
@@ -132,6 +134,7 @@ export const cases: Case[] = [
     cover: `${CDN}/680fdcc858f191ccde2e55aa_Larion%20Kantor%20x%20%D0%A6%D0%B8%D1%82%D0%B0%D1%82%D0%B0.jpg`,
     coverAlt: 'Kantor Jewelry — PR-кейс ЦИТАТА',
     featured: true,
+    homeOrder: 11,
     sortOrder: 6,
     year: 2024,
     summary: 'PR-кампания для ювелирного бренда Kantor Jewelry: публикации в федеральных и lifestyle-изданиях.',
@@ -148,6 +151,7 @@ export const cases: Case[] = [
     cover: `${CDN}/680fe07dab336d938f305066_%D0%A2%D0%B2%D0%BE%D0%B5%20%D0%BC%D0%B5%D1%81%D1%82%D0%BE%20x%20%D0%A6%D0%B8%D1%82%D0%B0%D1%82%D0%B0.jpg`,
     coverAlt: 'Твое место — PR-кейс ЦИТАТА',
     featured: true,
+    homeOrder: 12,
     sortOrder: 7,
     year: 2024,
     summary: 'PR-сопровождение проекта «Твое место».',
@@ -164,6 +168,7 @@ export const cases: Case[] = [
     cover: `${CDN}/681a5ee53c233fa947223ebb_influencers%20aesthetic.jpg`,
     coverAlt: 'Bohicare — PR-кейс ЦИТАТА',
     featured: true,
+    homeOrder: 9,
     sortOrder: 4,
     year: 2024,
     summary: 'PR Bohicare: кушоны, адвент и рост в beauty-медиа.',
@@ -199,6 +204,7 @@ export const cases: Case[] = [
     cover: `${CDN}/680e3e4d5b46e54492ef8dd8_advent_hollyshop-PR%20%D0%90%D0%B3%D0%B5%D0%BD%D1%82%D1%81%D1%82%D0%B2%D0%BE%20%D0%A6%D0%B8%D1%82%D0%B0%D1%82%D0%B0.png`,
     coverAlt: 'Презентация книги Делай как Коуч',
     featured: true,
+    homeOrder: 7,
     sortOrder: 2,
     year: 2024,
     summary: 'PR-поддержка презентации книги «Делай как Коуч».',
@@ -215,6 +221,7 @@ export const cases: Case[] = [
     cover: `${CDN}/680faf84fe00f290572cfeaf_kantor%20x%20%D1%86%D0%B8%D1%82%D0%B0%D1%82%D0%B0%20pr.png`,
     coverAlt: 'АйсКро — PR-кейс ЦИТАТА',
     featured: true,
+    homeOrder: 6,
     sortOrder: 1,
     year: 2023,
     summary: 'PR-кампания для бренда АйсКро.',
@@ -262,6 +269,7 @@ export const cases: Case[] = [
     cover: `${CDN}/680fe07dab336d938f305066_%D0%A2%D0%B2%D0%BE%D0%B5%20%D0%BC%D0%B5%D1%81%D1%82%D0%BE%20x%20%D0%A6%D0%B8%D1%82%D0%B0%D1%82%D0%B0.jpg`,
     coverAlt: 'Дивница — PR-кейс',
     featured: true,
+    homeOrder: 15,
     sortOrder: 10,
     summary: 'Дивница: открытие в Москве, The Blueprint и победа RE.AWARDS.',
     heroTitle: 'Дивница — новое русское спа в медиа и премиях',
@@ -296,6 +304,7 @@ export const cases: Case[] = [
     summary: 'Дизайн-бюро премиальных интерьеров: Sostav, Дом Mail и INMYROOM с охватом 6,9 млн.',
     heroTitle: 'PODRUGOMU: ремонт без нервного тика — и с федеральным охватом',
     featured: true,
+    homeOrder: 23,
     sortOrder: 18,
     blocks: [
       {
@@ -326,6 +335,7 @@ export const cases: Case[] = [
     summary: 'Инженерный бренд бытовой техники: Forbes, beauty-подборки Model S и сцена Tech Week.',
     heroTitle: 'REMEZ: история основателя, продукт в подборках и экспертность на сцене',
     featured: true,
+    homeOrder: 22,
     sortOrder: 17,
     blocks: [
       {
@@ -358,6 +368,7 @@ export const cases: Case[] = [
     summary: 'Дистрибьютор и бренд-билдер в beauty: InterCHARM, печать «Ведомостей» и Tech Week.',
     heroTitle: 'AskMask: сцена, печать и запуск собственных брендов',
     featured: true,
+    homeOrder: 21,
     sortOrder: 16,
     blocks: [
       {
@@ -390,6 +401,7 @@ export const cases: Case[] = [
     summary: 'Корейская декоративная косметика: запуск в медиа, дайджесты и коллаборация с Aquamarine.',
     heroTitle: 'JCos: умные формулы, медиа и лучшая коллаборация ресторана',
     featured: true,
+    homeOrder: 20,
     sortOrder: 15,
     blocks: [
       {
@@ -417,6 +429,7 @@ export const cases: Case[] = [
     summary: 'История франчайзинговой сети в Forbes: от точки в Томске до 70+ филиалов и 1,3 млрд выручки.',
     heroTitle: '«Безумно. Крутая шаурма» — история масштаба на страницах Forbes',
     featured: true,
+    homeOrder: 19,
     sortOrder: 14,
     blocks: [
       {
@@ -448,6 +461,7 @@ export const cases: Case[] = [
     summary: 'PetTech-платформа адопции животных: запуск и интервью основательницы в BURO.',
     heroTitle: '«Друг» — PetTech с доброй миссией в федеральных медиа',
     featured: true,
+    homeOrder: 18,
     sortOrder: 13,
     blocks: [
       {
@@ -470,6 +484,7 @@ export const cases: Case[] = [
     summary: 'Эксклюзив в «Известиях» о серийном вездеходе нового поколения Иркутского завода.',
     heroTitle: 'MR-2: первое серийное производство вездехода нового поколения',
     featured: true,
+    homeOrder: 17,
     sortOrder: 12,
     blocks: [
       {
@@ -500,6 +515,7 @@ export const cases: Case[] = [
     summary: 'Домашний текстиль: финал и победа RE.AWARDS как лучший бренд текстиля для дома.',
     heroTitle: 'Linen Texture — лучший бренд текстиля для дома по версии RE.AWARDS',
     featured: true,
+    homeOrder: 16,
     sortOrder: 11,
     blocks: [
       {

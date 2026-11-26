@@ -46,6 +46,8 @@ type CaseEditFormProps = {
   previewToken?: string | null
   saved?: boolean
   error?: string
+  /** Events linked to this case (inverse of event.cases). */
+  relatedEvents?: { slug: string; title: string }[]
 }
 
 type FormSnapshot = {
@@ -123,6 +125,7 @@ export function CaseEditForm({
   previewToken,
   saved,
   error,
+  relatedEvents = [],
 }: CaseEditFormProps) {
   const pathname = usePathname()
   const [showDelete, setShowDelete] = useState(false)
@@ -304,13 +307,13 @@ export function CaseEditForm({
       blockLeave()
       return
     }
-    if (featured && !homeOrder.trim()) {
+    if (featured && status === 'published' && !homeOrder.trim()) {
       e.preventDefault()
       setFormError('Укажите порядок на главной')
       blockLeave()
       return
     }
-    if (featured && homeOrderTaken && homeOrderWarning) {
+    if (featured && status === 'published' && homeOrderTaken && homeOrderWarning) {
       e.preventDefault()
       setFormError(homeOrderWarning)
       blockLeave()
@@ -521,28 +524,50 @@ export function CaseEditForm({
             />
           </div>
 
-          <AdminPublishAside
-            status={status}
-            featured={featured}
-            homeOrder={homeOrder}
-            homeOrderWarning={homeOrderWarning}
-            homeOrderChecking={homeOrderChecking}
-            dirty={dirty}
-            galleryEmpty={gallery.length === 0}
-            saveDisabled={
-              uploadBusy ||
-              isNavigatingAway ||
-              slugCheck === 'taken' ||
-              (featured && homeOrderTaken)
-            }
-            showDelete={!isNew}
-            canPreview={Boolean(previewHref)}
-            onStatusChange={setStatus}
-            onFeaturedChange={onFeaturedChange}
-            onHomeOrderChange={setHomeOrder}
-            onCancel={() => navigateAway('/admin/cases')}
-            onDelete={() => setShowDelete(true)}
-          />
+          <div className="admin-edit-aside-stack">
+            <AdminPublishAside
+              status={status}
+              featured={featured}
+              homeOrder={homeOrder}
+              homeOrderWarning={homeOrderWarning}
+              homeOrderChecking={homeOrderChecking}
+              dirty={dirty}
+              galleryEmpty={gallery.length === 0}
+              saveDisabled={
+                uploadBusy ||
+                isNavigatingAway ||
+                slugCheck === 'taken' ||
+                (featured && status === 'published' && homeOrderTaken)
+              }
+              showDelete={!isNew}
+              canPreview={Boolean(previewHref)}
+              onStatusChange={setStatus}
+              onFeaturedChange={onFeaturedChange}
+              onHomeOrderChange={setHomeOrder}
+              onCancel={() => navigateAway('/admin/cases')}
+              onDelete={() => setShowDelete(true)}
+            />
+            {!isNew ? (
+              <section className="admin-edit-card">
+                <h2 className="admin-edit-section__title">Связанные события</h2>
+                {relatedEvents.length ? (
+                  <ul className="admin-muted" style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                    {relatedEvents.map((ev) => (
+                      <li key={ev.slug}>
+                        <a className="admin-linkish" href={`/admin/events/${ev.slug}`}>
+                          {ev.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="admin-muted">
+                    Нет привязок. Добавьте кейс в карточке события.
+                  </p>
+                )}
+              </section>
+            ) : null}
+          </div>
         </div>
       </form>
 

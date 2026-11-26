@@ -44,8 +44,8 @@ export const SiteSettings: GlobalConfig = {
     {
       name: 'telegramBotUrl',
       type: 'text',
-      label: 'Ссылка на Telegram-бот (консультация)',
-      defaultValue: 'https://t.me/citata_pr_bot',
+      label: 'Telegram для консультации',
+      defaultValue: 'https://t.me/kate_kolesnik',
     },
     {
       name: 'telegramChannelUrl',

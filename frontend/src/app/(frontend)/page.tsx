@@ -1,7 +1,7 @@
 import { HomeHero } from '@/components/home/HomeHero'
 import type { MediaGridItem } from '@/components/home/HomeCasesGrid'
-import { fetchFeaturedArticles } from '@/lib/content-articles'
 import { fetchCases, fetchFeaturedCases } from '@/lib/content-cases'
+import { fetchFeaturedEvents } from '@/lib/content-events'
 import { fetchSiteSettings } from '@/lib/content-site'
 import { absoluteUrl, organizationJsonLd } from '@/lib/seo'
 
@@ -27,17 +27,17 @@ function toCaseItem(
   }
 }
 
-function toArticleItem(
-  item: Awaited<ReturnType<typeof fetchFeaturedArticles>>[number],
-): (MediaGridItem & { homeOrder: number }) | null {
-  if (!item.cover) return null
+function toEventItem(
+  item: Awaited<ReturnType<typeof fetchFeaturedEvents>>[number],
+): MediaGridItem & { homeOrder: number } {
   return {
     slug: item.slug,
     title: item.title,
     cover: item.cover,
     coverAlt: item.coverAlt || item.title,
-    href: `/articles/${item.slug}`,
-    homeOrder: item.homeOrder ?? Number.MAX_SAFE_INTEGER,
+    href: `/events/${item.slug}`,
+    coverKind: coverKindFromSrc(item.cover, item.gallery?.[0]?.kind),
+    homeOrder: item.homeOrder as number,
   }
 }
 
@@ -51,15 +51,15 @@ function byHomeOrder(
 
 export default async function HomePage() {
   const settings = await fetchSiteSettings()
-  const [allCases, featuredCases, featuredArticles] = await Promise.all([
+  const [allCases, featuredCases, featuredEvents] = await Promise.all([
     fetchCases(),
     fetchFeaturedCases(),
-    fetchFeaturedArticles(),
+    fetchFeaturedEvents(),
   ])
 
   const featuredGrid = [
     ...featuredCases.map(toCaseItem),
-    ...featuredArticles.map(toArticleItem).filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    ...featuredEvents.map(toEventItem),
   ].sort(byHomeOrder)
 
   // Fallback: no featured homepage slots → published cases by works list order

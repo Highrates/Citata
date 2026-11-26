@@ -13,6 +13,8 @@ import type { PressMention as PayloadPressMention, SiteSetting } from '@/payload
 
 export { ensureAuthor, ensureMediaByUrl, resolveMediaId }
 
+// findEventIdBySlug exported below with other find* helpers
+
 export async function requireAdminSession() {
   if (!(await hasValidAdminSessionCookie())) {
     throw new Error('Unauthorized')
@@ -96,6 +98,15 @@ export async function findCaseIdBySlug(payload: AdminPayloadClient, slug: string
 export async function findArticleIdBySlug(payload: AdminPayloadClient, slug: string) {
   const result = await payload.find<PayloadArticle>({
     collection: 'articles',
+    where: { slug: { equals: slug } },
+    limit: 1,
+  })
+  return result.docs[0]?.id
+}
+
+export async function findEventIdBySlug(payload: AdminPayloadClient, slug: string) {
+  const result = await payload.find<{ id: number }>({
+    collection: 'events',
     where: { slug: { equals: slug } },
     limit: 1,
   })

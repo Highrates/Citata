@@ -1,7 +1,7 @@
 import 'server-only'
 
-import type { Article, Case, PressMention, Service, SiteSettings } from '@/content/types'
-import { getArticles, getCaseBySlug, getCases } from '@/lib/content'
+import type { Article, Case, Event, PressMention, Service, SiteSettings } from '@/content/types'
+import { getArticles, getCaseBySlug, getCases, getEvents } from '@/lib/content'
 import { getFixturePressMentions } from '@/lib/content-press'
 import { getFixtureServices } from '@/lib/content-services'
 import { hasPayloadApiKey, payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
@@ -9,6 +9,7 @@ import { hasValidAdminSessionCookie } from '@/lib/admin/session'
 import { fetchAllPages } from '@/lib/admin/paginate'
 import { mapPayloadArticleToArticle } from '@/lib/map-article'
 import { mapPayloadCaseToCase } from '@/lib/map-case'
+import { mapPayloadEventToEvent, type PayloadEvent } from '@/lib/map-event'
 import { mapPayloadPressMentionToPressMention } from '@/lib/map-press'
 import { mapPayloadServiceToService } from '@/lib/map-service'
 import { mapPayloadSiteSettingsToSiteSettings } from '@/lib/map-site'
@@ -57,6 +58,17 @@ async function fetchAllPayloadArticles(): Promise<Article[]> {
     ),
   )
   return docs.map(mapPayloadArticleToArticle)
+}
+
+async function fetchAllPayloadEvents(): Promise<Event[]> {
+  const docs = await fetchAllPages<PayloadEvent>((page, limit) =>
+    payloadGet<PayloadListResponse<PayloadEvent>>(
+      '/api/events',
+      { depth: 2, limit, page, sort: '-publishedAt' },
+      { auth: hasPayloadApiKey() },
+    ),
+  )
+  return docs.map(mapPayloadEventToEvent)
 }
 
 async function fetchAllPayloadServices(): Promise<Service[]> {
@@ -143,6 +155,38 @@ export async function fetchAdminArticleBySlug(
   }
 
   return { item: getArticles().find((a) => a.slug === slug), source: 'fixtures' }
+}
+
+export async function fetchAdminEvents(): Promise<{ items: Event[]; source: AdminDataSource }> {
+  await requireAdminDataAccess()
+  const fromPayload = await tryPayload(fetchAllPayloadEvents)
+  if (fromPayload) return { items: fromPayload, source: 'payload' }
+  return { items: getEvents(), source: 'fixtures' }
+}
+
+export async function fetchAdminEventBySlug(
+  slug: string,
+): Promise<{ item: Event | undefined; source: AdminDataSource }> {
+  await requireAdminDataAccess()
+  const fromPayload = await tryPayload(async () => {
+    const result = await payloadGet<PayloadListResponse<PayloadEvent>>(
+      '/api/events',
+      {
+        'where[slug][equals]': slug,
+        depth: 2,
+        limit: 1,
+      },
+      { auth: hasPayloadApiKey() },
+    )
+    const doc = result.docs[0]
+    return doc ? mapPayloadEventToEvent(doc) : undefined
+  })
+
+  if (fromPayload !== null) {
+    return { item: fromPayload, source: 'payload' }
+  }
+
+  return { item: getEvents().find((a) => a.slug === slug), source: 'fixtures' }
 }
 
 export async function fetchAdminServices(): Promise<{ items: Service[]; source: AdminDataSource }> {

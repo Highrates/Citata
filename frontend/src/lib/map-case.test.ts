@@ -11,6 +11,14 @@ test('fixture cases conform to canonical model', () => {
   }
 })
 
+test('fixture cases that are featured have homeOrder', () => {
+  for (const item of cases) {
+    if (!item.featured) continue
+    assert.equal(typeof item.homeOrder, 'number')
+    assert.ok((item.homeOrder as number) >= 1)
+  }
+})
+
 test('mapCaseToPayloadData preserves scalar fields and SEO', () => {
   const fixture = {
     ...cases[0],

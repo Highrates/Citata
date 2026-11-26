@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { CaseEditForm } from '@/components/admin/CaseEditForm'
-import { fetchAdminCaseBySlug } from '@/lib/admin/data'
+import { fetchAdminCaseBySlug, fetchAdminEvents } from '@/lib/admin/data'
 import { flashFromSearchParams } from '@/lib/admin/flash'
 import { createCasePreviewToken } from '@/lib/preview'
 
@@ -19,14 +19,22 @@ export default async function CmsCaseEditPage({
 }) {
   const { slug } = await params
   const sp = await searchParams
-  const { item, source } = await fetchAdminCaseBySlug(slug)
+  const [{ item, source }, { items: events }] = await Promise.all([
+    fetchAdminCaseBySlug(slug),
+    fetchAdminEvents(),
+  ])
   if (!item) notFound()
+
+  const relatedEvents = events
+    .filter((e) => e.cases?.some((c) => c.slug === item.slug))
+    .map((e) => ({ slug: e.slug, title: e.title }))
 
   return (
     <CaseEditForm
       key={item.slug}
       item={item}
       source={source}
+      relatedEvents={relatedEvents}
       previewToken={await createCasePreviewToken(item.slug)}
       {...flashFromSearchParams(sp)}
     />

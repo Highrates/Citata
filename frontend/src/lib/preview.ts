@@ -23,10 +23,10 @@ function getPreviewSecret(): string | null {
 }
 
 /**
- * Short-lived signed preview token bound to a case slug.
+ * Short-lived signed preview token bound to a content slug (case / event / …).
  * Format: p1.<exp>.<slugB64>.<sig>
  */
-export async function createCasePreviewToken(slug: string): Promise<string | null> {
+export async function createPreviewToken(slug: string): Promise<string | null> {
   const secret = getPreviewSecret()
   const normalized = slug.trim()
   if (!secret || !normalized) return null
@@ -38,7 +38,7 @@ export async function createCasePreviewToken(slug: string): Promise<string | nul
   return `${payload}.${sig}`
 }
 
-export async function isCasePreviewAuthorized(
+export async function isPreviewAuthorized(
   preview: string | string[] | undefined,
   slug: string,
 ): Promise<boolean> {
@@ -74,8 +74,13 @@ export async function isCasePreviewAuthorized(
   return verifyHmacSha256Base64Url(secret, `${version}.${expStr}.${slugPart}`, sig)
 }
 
-/** @deprecated use createCasePreviewToken(slug) */
+export const createCasePreviewToken = createPreviewToken
+export const createEventPreviewToken = createPreviewToken
+export const isCasePreviewAuthorized = isPreviewAuthorized
+export const isEventPreviewAuthorized = isPreviewAuthorized
+
+/** @deprecated use createPreviewToken(slug) */
 export async function casePreviewQueryValue(slug?: string): Promise<string | null> {
   if (!slug) return null
-  return createCasePreviewToken(slug)
+  return createPreviewToken(slug)
 }

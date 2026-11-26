@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { articles } from '@/content/articles'
+import { events } from '@/content/events'
 import { validateArticle } from '@/content/article-model'
+import type { Article } from '@/content/types'
 import { lexicalToSections } from '@/lib/lexical-utils'
 import {
   mapArticleSectionToPayloadSection,
@@ -11,18 +13,39 @@ import {
 } from '@/lib/map-article'
 import type { Article as PayloadArticle } from '@/payload-types'
 
-test('fixture articles conform to canonical model', () => {
-  for (const article of articles) {
-    assert.deepEqual(validateArticle(article), [])
-    for (const section of article.sections) {
+const sampleArticle: Article = {
+  slug: 'demo-article',
+  title: 'Demo',
+  excerpt: 'Кратко',
+  cover: 'https://cdn.example.com/cover.jpg',
+  coverAlt: 'Обложка',
+  author: { name: 'Ольга', role: 'Редактор' },
+  publishedAt: '2025-01-01',
+  readingTime: 3,
+  sections: [
+    { type: 'heading', text: 'Заголовок' },
+    { type: 'paragraph', text: 'Текст' },
+    { type: 'quote', text: 'Цитата' },
+    { type: 'list', items: ['А', 'Б'] },
+  ],
+}
+
+test('articles fixtures stay empty after news → events split', () => {
+  assert.equal(articles.length, 0)
+  assert.ok(events.length > 0)
+})
+
+test('fixture events conform to canonical article model shape', () => {
+  for (const event of events) {
+    assert.deepEqual(validateArticle(event), [])
+    for (const section of event.sections) {
       assert.ok(section.type)
     }
   }
 })
 
 test('round-trip: fixture section → payload section → article section', () => {
-  const fixture = articles[0]
-  for (const section of fixture.sections) {
+  for (const section of sampleArticle.sections) {
     const payloadSection = mapArticleSectionToPayloadSection(section)
     const restored = mapPayloadSectionToArticleSection(payloadSection)
     assert.deepEqual(restored, section)
@@ -30,14 +53,13 @@ test('round-trip: fixture section → payload section → article section', () =
 })
 
 test('mapArticleToPayloadData preserves scalar fields', () => {
-  const fixture = articles[0]
-  const payloadData = mapArticleToPayloadData(fixture, { coverId: 1, authorId: 2 })
+  const payloadData = mapArticleToPayloadData(sampleArticle, { coverId: 1, authorId: 2 })
 
-  assert.equal(payloadData.slug, fixture.slug)
-  assert.equal(payloadData.title, fixture.title)
+  assert.equal(payloadData.slug, sampleArticle.slug)
+  assert.equal(payloadData.title, sampleArticle.title)
   assert.equal(payloadData.cover, 1)
   assert.equal(payloadData.author, 2)
-  assert.equal(payloadData.sections.length, fixture.sections.length)
+  assert.equal(payloadData.sections.length, sampleArticle.sections.length)
 })
 
 test('legacy richText content maps to sections', () => {

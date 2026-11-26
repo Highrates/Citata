@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache'
 import { cases } from '@/content/cases'
 import type { Case } from '@/content/types'
 import { fetchAllPages } from '@/lib/admin/paginate'
+import { buildPayloadWhereParams } from '@/lib/admin/payload-where'
 import { payloadGet, type PayloadListResponse } from '@/lib/api/payload-client'
 import { usesPayloadContent } from '@/lib/content-source'
 import { mapPayloadCaseToCase } from '@/lib/map-case'
@@ -41,12 +42,18 @@ export async function fetchCases(): Promise<Case[]> {
 
 export async function fetchFeaturedCases(): Promise<Case[]> {
   const all = await fetchCases()
-  // Homepage uses shared homeOrder (with articles); sortOrder is for /works only
+  // Homepage uses shared homeOrder (with events); sortOrder is for /works only
   return all
-    .filter((c) => c.featured && (c.status ?? 'published') === 'published')
+    .filter(
+      (c) =>
+        c.featured &&
+        (c.status ?? 'published') === 'published' &&
+        typeof c.homeOrder === 'number' &&
+        Boolean(c.cover),
+    )
     .sort((a, b) => {
-      const ao = a.homeOrder ?? Number.MAX_SAFE_INTEGER
-      const bo = b.homeOrder ?? Number.MAX_SAFE_INTEGER
+      const ao = a.homeOrder as number
+      const bo = b.homeOrder as number
       if (ao !== bo) return ao - bo
       return a.title.localeCompare(b.title, 'ru')
     })
@@ -83,5 +90,40 @@ export async function fetchCaseBySlug(
 
   const all = await fetchCases()
   return all.find((c) => c.slug === slug)
+}
+
+/** Fetch only the requested published cases (event materials) — not the full catalog. */
+export async function fetchCasesBySlugs(slugs: string[]): Promise<Case[]> {
+  const unique = [...new Set(slugs.map((s) => s.trim()).filter(Boolean))]
+  if (!unique.length) return []
+
+  if (!usesPayloadContent()) {
+    const wanted = new Set(unique)
+    return getFixtureCases().filter((c) => wanted.has(c.slug))
+  }
+
+  try {
+    const where =
+      unique.length === 1
+        ? {
+            and: [{ status: { equals: 'published' } }, { slug: { equals: unique[0] } }],
+          }
+        : {
+            and: [
+              { status: { equals: 'published' } },
+              { or: unique.map((slug) => ({ slug: { equals: slug } })) },
+            ],
+          }
+
+    const result = await payloadGet<PayloadListResponse<PayloadCase>>('/api/cases', {
+      ...buildPayloadWhereParams(where),
+      depth: 2,
+      limit: unique.length,
+    })
+    const bySlug = new Map(result.docs.map((doc) => [doc.slug, mapPayloadCaseToCase(doc)]))
+    return unique.map((slug) => bySlug.get(slug)).filter((c): c is Case => Boolean(c))
+  } catch {
+    return []
+  }
 }
 

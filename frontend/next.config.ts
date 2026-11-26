@@ -10,8 +10,11 @@ const nextConfig: NextConfig = {
     return [
       { source: '/cms', destination: '/admin', permanent: true },
       { source: '/cms/:path*', destination: '/admin/:path*', permanent: true },
-      { source: '/blog', destination: '/articles', permanent: true },
-      { source: '/blog/:slug', destination: '/articles/:slug', permanent: true },
+      { source: '/blog', destination: '/events', permanent: true },
+      { source: '/blog/:slug', destination: '/events/:slug', permanent: true },
+      // Former «новости» lived under /articles; migrated content is now /events
+      { source: '/news', destination: '/events', permanent: true },
+      { source: '/news/:slug', destination: '/events/:slug', permanent: true },
       { source: '/work', destination: '/works', permanent: true },
       { source: '/work/:slug', destination: '/works/:slug', permanent: true },
       { source: '/case-study/:slug', destination: '/works/:slug', permanent: true },
